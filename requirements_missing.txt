@@ -1,0 +1,9 @@
+python-pocketcasts==0.0.1
+dovado==0.4.1
+eliqonline==1.0.13
+pyfido==1.0.1
+pyhydroquebec==1.1.0
+somecomfort==0.4.1
+miniupnpc==2.0.2
+python_openzwave==0.4.0.35
+pytradfri[async]==5.5.1
