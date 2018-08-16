@@ -85,6 +85,12 @@ class EnOceanDongle:
             elif temp.data[4] == 0x0c:
                 rxtype = "power"
                 value = temp.data[3] + (temp.data[2] << 8)
+            elif temp.data[4] == 0x0f:
+                rxtype = "light"
+                if temp.data[2] == 0x00:
+                    value = temp.data[1]
+                else:
+                    value = 300 + ((temp.data[2]-1) * (29700 / 255))
             elif temp.data[2] & 0x60 == 0x60:
                 rxtype = "switch_status"
                 channel = temp.data[2] & 0x1F
@@ -106,6 +112,9 @@ class EnOceanDongle:
                     if temp.sender_int == self._combine_hex(device.dev_id):
                         if value > 10:
                             device.value_changed(1)
+                if rxtype == "light" and device.stype == "lightsensor":
+                    if temp.sender_int == self._combine_hex(device.dev_id):
+                        device.value_changed(value)
                 if rxtype == "switch_status" and device.stype == "switch" and \
                         channel == device.channel:
                     if temp.sender_int == self._combine_hex(device.dev_id):
