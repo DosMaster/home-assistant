@@ -3,3 +3,328 @@ media_player.living_room_tv:
   name:
   platform: cast
   unique_id: 6877c31c-897b-82a1-23c8-2bdf4dd7d7b4
+zwave.aeotec_zw090_zstick_gen5_eu:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-65
+light.fibaro_system_fgrgbwm441_rgbw_controller_level:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-72057595049377793
+zwave.fibaro_system_fgrgbwm441_rgbw_controller:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-60
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-72057595082932225
+zwave.fibaro_system_fgrgbwm441_rgbw_controller_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-62
+zwave.telldus_unknown_type0001_id0002:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-1
+zwave.unknown_node_3:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-3
+zwave.telldus_tzwp100_plugin_switch:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-4
+zwave.telldus_tzwp100_plugin_switch_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-5
+zwave.aeotec_zw117_range_extender_6:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-31
+zwave.aeotec_zw117_range_extender_6_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-32
+zwave.aeotec_zw117_range_extender_6_3:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-51
+zwave.aeotec_zw117_range_extender_6_4:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-54
+zwave.unknown_node_12:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-12
+zwave.unknown_node_44:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-44
+zwave.aeotec_zw117_range_extender_6_5:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-45
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_3:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-144115189087305729
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_4:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-216172783125233665
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_5:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-288230377163161601
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_6:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-360287971201089537
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_7:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-432345565239017473
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_8:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-144115189120860161
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_9:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-216172783158788097
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_10:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-288230377196716033
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_11:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-360287971234643969
+light.fibaro_system_fgrgbwm441_rgbw_controller_level_12:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-432345565272571905
+zwave.unknown_node_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-2
+zwave.unknown_node_8:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-8
+zwave.unknown_node_9:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-9
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_energy:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-72057595049574402
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_power:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-72057595049574530
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_exporting:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-72057595049574912
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_energy_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-72057595083128834
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_power_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-72057595083128962
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_exporting_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-72057595083129344
+zwave.unknown_node_13:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-13
+zwave.unknown_node_56:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-56
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_power_3:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 60-72057595049558082
+sensor.fibaro_system_fgrgbwm441_rgbw_controller_power_4:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 62-72057595083112514
+zwave.unknown_node_11:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-11
+zwave.unknown_node_28:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-28
+zwave.unknown_node_14:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-14
+zwave.unknown_node_15:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-15
+zwave.unknown_node_53:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-53
+zwave.unknown_node_55:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-55
+zwave.unknown_node_46:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-46
+zwave.unknown_node_48:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-48
+zwave.unknown_node_49:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-49
+zwave.unknown_node_52:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-52
+zwave.unknown_node_26:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-26
+binary_sensor.fibaro_system_fgms001zw5_motion_sensor_sensor:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594076463104
+sensor.fibaro_system_fgms001zw5_motion_sensor_temperature:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594076479506
+sensor.fibaro_system_fgms001zw5_motion_sensor_luminance:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594076479538
+sensor.fibaro_system_fgms001zw5_motion_sensor_seismic_intensity:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594076479890
+sensor.fibaro_system_fgms001zw5_motion_sensor_sourcenodeid:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594077528097
+sensor.fibaro_system_fgms001zw5_motion_sensor_burglar:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594077528225
+sensor.fibaro_system_fgms001zw5_motion_sensor_general:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594078232577
+sensor.fibaro_system_fgms001zw5_motion_sensor_alarm_type:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594077528065
+sensor.fibaro_system_fgms001zw5_motion_sensor_alarm_level:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 2-72057594077528081
+switch.telldus_tzwp100_plugin_switch_switch:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 4-72057594109837312
+switch.telldus_tzwp100_plugin_switch_switch_2:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: 5-72057594126614528
+zwave.unknown_node_43:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-43
+zwave.unknown_node_39:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-39
+zwave.unknown_node_41:
+  config_entry_id:
+  name:
+  platform: zwave
+  unique_id: node-41
+media_player.hopplosheten_musik:
+  config_entry_id: ba7fdf9709884ac3a42e57a3a5670581
+  name:
+  platform: cast
+  unique_id: 363c52bb-c3fc-944a-8bb4-375b72022163

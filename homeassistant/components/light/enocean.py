@@ -94,15 +94,23 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         self._on_state = True
 
     def turn_off(self, **kwargs):
-        """Turn the light source off."""
-        command = [0xa5, 0x02, 0x00, 0x01, 0x09]
+        """Turn the light source off and sets specific dimmer value."""
+        brightness = kwargs.get(ATTR_BRIGHTNESS)
+        if brightness is not None:
+            self._brightness = brightness
+
+        bval = math.floor(self._brightness / 256.0 * 100.0)
+        if bval == 0:
+            bval = 1
+        command = [0xa5, 0x02, bval, 0x01, 0x08]
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
         self._on_state = False
 
-    def value_changed(self, val):
+    def value_changed(self, val, val2):
         """Update the internal state of this device."""
-        self._brightness = math.floor(val / 100.0 * 256.0)
-        self._on_state = bool(val != 0)
+        if val2 == 0x09 and val is not None:
+            self._brightness = math.floor(val / 100.0 * 256.0)
+        self._on_state = bool(val2 == 0x09)
         self.schedule_update_ha_state()

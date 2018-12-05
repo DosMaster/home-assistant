@@ -74,6 +74,6 @@ class EnOceanSensor(enocean.EnOceanDevice, Entity):
     def unit_of_measurement(self):
         """Return the unit of measurement."""
         if self.type=='light':
-            return 'LX'
+            return 'lx'
         else:
             return 'W'

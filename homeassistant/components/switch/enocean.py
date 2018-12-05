@@ -85,7 +85,15 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
                                     0x00, 0x00, 0x00, 0x00], optional=optional,
                               packet_type=0x01)
         else:
-            command = [0xf6, 0x30]
+            if self.channel == 1:
+                data = 0x30
+            else:
+                data = 0x70
+            command = [0xf6, data]
+            command.extend(self._sender_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
+            command = [0xf6, 0x00]
             command.extend(self._sender_id)
             command.extend([0x00])
             self.send_command(command, [], 0x01)
@@ -102,6 +110,14 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
                                     0x00, 0x00, 0x00, 0x00], optional=optional,
                               packet_type=0x01)
         else:
+            if self.channel == 1:
+                data = 0x10
+            else:
+                data = 0x50
+            command = [0xf6, data]
+            command.extend(self._sender_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
             command = [0xf6, 0x00]
             command.extend(self._sender_id)
             command.extend([0x00])
@@ -113,3 +129,5 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
         """Update the internal state of the switch."""
         self._on_state = val
         self.schedule_update_ha_state()
+    
+ 

@@ -75,32 +75,41 @@ class EnOceanDongle:
             _LOGGER.debug("Received radio packet: %s", temp)
             rxtype = None
             value = None
+            value2 = None
             channel = 0
-            if temp.data[6] == 0x30:
-                rxtype = "wallswitch"
-                value = 1
-            elif temp.data[6] == 0x20:
-                rxtype = "wallswitch"
-                value = 0
-            elif temp.data[4] == 0x0c:
-                rxtype = "power"
-                value = temp.data[3] + (temp.data[2] << 8)
-            elif temp.data[4] == 0x0f:
-                rxtype = "light"
-                if temp.data[2] == 0x00:
-                    value = temp.data[1]
-                else:
-                    value = 300 + ((temp.data[2]-1) * (29700 / 255))
-            elif temp.data[2] & 0x60 == 0x60:
-                rxtype = "switch_status"
-                channel = temp.data[2] & 0x1F
-                if temp.data[3] == 0xe4:
+            if temp.data[0] == 0xf6:
+                rxtype = "ft55_status"
+                if temp.data[1] == 0x70:
                     value = 1
-                elif temp.data[3] == 0x80:
+                else:
                     value = 0
-            elif temp.data[0] == 0xa5 and temp.data[1] == 0x02:
+            if temp.data[0] == 0xa5 and temp.data[1] == 0x02:
                 rxtype = "dimmerstatus"
                 value = temp.data[2]
+                value2 = temp.data[4]
+            else:
+                if temp.data[6] == 0x30:
+                    rxtype = "wallswitch"
+                    value = 1
+                elif temp.data[6] == 0x20:
+                    rxtype = "wallswitch"
+                    value = 0
+                elif temp.data[4] == 0x0c:
+                    rxtype = "power"
+                    value = temp.data[3] + (temp.data[2] << 8)
+                elif temp.data[4] == 0x0f:
+                    rxtype = "light"
+                    if temp.data[2] == 0x00:
+                        value = temp.data[1]
+                    else:
+                        value = 300 + ((temp.data[2]-1) * (29700 / 255))
+                elif temp.data[2] & 0x60 == 0x60:
+                    rxtype = "switch_status"
+                    channel = temp.data[2] & 0x1F
+                    if temp.data[3] == 0xe4:
+                        value = 1
+                    elif temp.data[3] == 0x80:
+                        value = 0
             for device in self.__devices:
                 if rxtype == "wallswitch" and device.stype == "listener":
                     if temp.sender_int == self._combine_hex(device.dev_id):
@@ -121,6 +130,15 @@ class EnOceanDongle:
                         device.value_changed(value)
                 if rxtype == "dimmerstatus" and device.stype == "dimmer":
                     if temp.sender_int == self._combine_hex(device.dev_id):
+                        device.value_changed(value, value2)
+                if rxtype == "dimmerstatus" and device.stype == "FT55":
+                    if temp.sender_int == self._combine_hex(device.dev_id):
+                        device.value_changed(value2 & 0x01)
+                if rxtype == "ft55_status" and device.stype == "dimmer":
+                    if temp.sender_int == self._combine_hex(device.dev_id):
+                        device.value_changed(None, 0x08 + value)
+                if rxtype == "ft55_status" and device.stype == "FT55":
+                    if temp.sender_int == self._combine_hex(device.dev_id):
                         device.value_changed(value)
 
 
@@ -138,4 +156,5 @@ class EnOceanDevice():
         """Send a command via the EnOcean dongle."""
         from enocean.protocol.packet import Packet
         packet = Packet(packet_type, data=data, optional=optional)
+        _LOGGER.debug("Sending radio packet: %s", packet)
         ENOCEAN_DONGLE.send_command(packet)
