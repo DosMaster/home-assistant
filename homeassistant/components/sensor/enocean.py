@@ -26,13 +26,13 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up an EnOcean sensor device."""
     dev_id = config.get(CONF_ID)
     devname = config.get(CONF_NAME)
     type = config.get(CONF_TYPE)
 
-    add_devices([EnOceanSensor(dev_id, devname, type)])
+    add_entities([EnOceanSensor(dev_id, devname, type)])
 
 
 class EnOceanSensor(enocean.EnOceanDevice, Entity):

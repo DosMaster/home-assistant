@@ -16,7 +16,6 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import location
 from homeassistant.helpers.entity import Entity
-from homeassistant.util import Throttle
 
 REQUIREMENTS = ['WazeRouteCalculator==0.6']
 
@@ -26,7 +25,7 @@ ATTR_DURATION = 'duration'
 ATTR_DISTANCE = 'distance'
 ATTR_ROUTE = 'route'
 
-CONF_ATTRIBUTION = "Data provided by the Waze.com"
+CONF_ATTRIBUTION = "Powered by Waze"
 CONF_DESTINATION = 'destination'
 CONF_ORIGIN = 'origin'
 CONF_INCL_FILTER = 'incl_filter'
@@ -38,7 +37,7 @@ DEFAULT_REALTIME = True
 
 ICON = 'mdi:car'
 
-REGIONS = ['US', 'NA', 'EU', 'IL']
+REGIONS = ['US', 'NA', 'EU', 'IL', 'AU']
 
 SCAN_INTERVAL = timedelta(minutes=5)
 
@@ -55,7 +54,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Waze travel time sensor platform."""
     destination = config.get(CONF_DESTINATION)
     name = config.get(CONF_NAME)
@@ -68,10 +67,11 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     sensor = WazeTravelTime(name, origin, destination, region,
                             incl_filter, excl_filter, realtime)
 
-    add_devices([sensor])
+    add_entities([sensor])
 
     # Wait until start event is sent to load this component.
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_START, sensor.update)
+    hass.bus.listen_once(
+        EVENT_HOMEASSISTANT_START, lambda _: sensor.update())
 
 
 def _get_location_from_attributes(state):
@@ -182,7 +182,6 @@ class WazeTravelTime(Entity):
 
         return friendly_name
 
-    @Throttle(SCAN_INTERVAL)
     def update(self):
         """Fetch new state data for the sensor."""
         import WazeRouteCalculator
