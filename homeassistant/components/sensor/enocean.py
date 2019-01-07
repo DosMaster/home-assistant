@@ -55,10 +55,7 @@ class EnOceanSensor(enocean.EnOceanDevice, Entity):
     @property
     def name(self):
         """Return the name of the device."""
-        if self.type == 'light':
-            return 'Light %s' % self.devname
-        else:
-            return 'Power %s' % self.devname
+        return self.devname
 
     def value_changed(self, value):
         """Update the internal state of the device."""

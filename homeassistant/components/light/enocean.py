@@ -11,7 +11,7 @@ import voluptuous as vol
 
 from homeassistant.components.light import (
     Light, ATTR_BRIGHTNESS, SUPPORT_BRIGHTNESS, PLATFORM_SCHEMA)
-from homeassistant.const import (CONF_NAME, CONF_ID)
+from homeassistant.const import (CONF_NAME, CONF_ID, CONF_TYPE)
 from homeassistant.components import enocean
 import homeassistant.helpers.config_validation as cv
 
@@ -29,6 +29,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.All(cv.ensure_list, [vol.Coerce(int)]),
     vol.Required(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_TYPE, default='dimmer'): cv.string,
 })
 
 
@@ -37,14 +38,15 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     sender_id = config.get(CONF_SENDER_ID)
     devname = config.get(CONF_NAME)
     dev_id = config.get(CONF_ID)
+    type = config.get(CONF_TYPE)
 
-    add_entities([EnOceanLight(sender_id, devname, dev_id)])
+    add_entities([EnOceanLight(sender_id, devname, dev_id, type)])
 
 
 class EnOceanLight(enocean.EnOceanDevice, Light):
     """Representation of an EnOcean light source."""
 
-    def __init__(self, sender_id, devname, dev_id):
+    def __init__(self, sender_id, devname, dev_id, type):
         """Initialize the EnOcean light source."""
         enocean.EnOceanDevice.__init__(self)
         self._on_state = False
@@ -53,6 +55,11 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         self.dev_id = dev_id
         self._devname = devname
         self.stype = 'dimmer'
+        self.type = type
+        if type == 'dimmer':
+            self.stype = "dimmer"
+        else:
+            self.stype = "onoff"
 
     @property
     def name(self):
@@ -80,14 +87,18 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_on(self, **kwargs):
         """Turn the light source on or sets a specific dimmer value."""
-        brightness = kwargs.get(ATTR_BRIGHTNESS)
-        if brightness is not None:
-            self._brightness = brightness
+        if self.stype == "dimmer":
+            brightness = kwargs.get(ATTR_BRIGHTNESS)
+            if brightness is not None:
+                self._brightness = brightness
 
-        bval = math.floor(self._brightness / 256.0 * 100.0)
-        if bval == 0:
-            bval = 1
-        command = [0xa5, 0x02, bval, 0x01, 0x09]
+            bval = math.floor(self._brightness / 256.0 * 100.0)
+            if bval == 0:
+                bval = 1
+            command = [0xa5, 0x02, bval, 0x01, 0x09]
+        else:
+            command = [0xa5, 0x01, 0x00, 0x00, 0x09]
+
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
@@ -95,14 +106,18 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_off(self, **kwargs):
         """Turn the light source off and sets specific dimmer value."""
-        brightness = kwargs.get(ATTR_BRIGHTNESS)
-        if brightness is not None:
-            self._brightness = brightness
+        if self.stype == "dimmer":
+            brightness = kwargs.get(ATTR_BRIGHTNESS)
+            if brightness is not None:
+                self._brightness = brightness
 
-        bval = math.floor(self._brightness / 256.0 * 100.0)
-        if bval == 0:
-            bval = 1
-        command = [0xa5, 0x02, bval, 0x01, 0x08]
+            bval = math.floor(self._brightness / 256.0 * 100.0)
+            if bval == 0:
+                bval = 1
+            command = [0xa5, 0x02, bval, 0x01, 0x08]
+        else:
+            command = [0xa5, 0x01, 0x00, 0x00, 0x08]
+
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
