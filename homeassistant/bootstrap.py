@@ -38,7 +38,8 @@ def from_config_dict(config: Dict[str, Any],
                      skip_pip: bool = False,
                      log_rotate_days: Any = None,
                      log_file: Any = None,
-                     log_no_color: bool = False) \
+                     log_no_color: bool = False,
+                     logfile_color: bool = False) \
                      -> Optional[core.HomeAssistant]:
     """Try to configure Home Assistant from a configuration dictionary.
 
@@ -57,7 +58,7 @@ def from_config_dict(config: Dict[str, Any],
     hass = hass.loop.run_until_complete(
         async_from_config_dict(
             config, hass, config_dir, enable_log, verbose, skip_pip,
-            log_rotate_days, log_file, log_no_color)
+            log_rotate_days, log_file, log_no_color, logfile_color)
     )
     return hass
 
@@ -70,7 +71,8 @@ async def async_from_config_dict(config: Dict[str, Any],
                                  skip_pip: bool = False,
                                  log_rotate_days: Any = None,
                                  log_file: Any = None,
-                                 log_no_color: bool = False) \
+                                 log_no_color: bool = False,
+                                 logfile_color: bool = False) \
                            -> Optional[core.HomeAssistant]:
     """Try to configure Home Assistant from a configuration dictionary.
 
@@ -81,7 +83,7 @@ async def async_from_config_dict(config: Dict[str, Any],
 
     if enable_log:
         async_enable_logging(hass, verbose, log_rotate_days, log_file,
-                             log_no_color)
+                             log_no_color, logfile_color)
 
     core_config = config.get(core.DOMAIN, {})
     has_api_password = bool((config.get('http') or {}).get('api_password'))
@@ -162,7 +164,8 @@ def from_config_file(config_path: str,
                      skip_pip: bool = True,
                      log_rotate_days: Any = None,
                      log_file: Any = None,
-                     log_no_color: bool = False)\
+                     log_no_color: bool = False,
+                     logfile_color: bool = False)\
         -> Optional[core.HomeAssistant]:
     """Read the configuration file and try to start all the functionality.
 
@@ -176,7 +179,7 @@ def from_config_file(config_path: str,
     hass = hass.loop.run_until_complete(
         async_from_config_file(
             config_path, hass, verbose, skip_pip,
-            log_rotate_days, log_file, log_no_color)
+            log_rotate_days, log_file, log_no_color, logfile_color)
     )
 
     return hass
@@ -188,7 +191,8 @@ async def async_from_config_file(config_path: str,
                                  skip_pip: bool = True,
                                  log_rotate_days: Any = None,
                                  log_file: Any = None,
-                                 log_no_color: bool = False)\
+                                 log_no_color: bool = False,
+                                 logfile_color: bool = False)\
         -> Optional[core.HomeAssistant]:
     """Read the configuration file and try to start all the functionality.
 
@@ -203,7 +207,7 @@ async def async_from_config_file(config_path: str,
         await async_mount_local_lib_path(config_dir)
 
     async_enable_logging(hass, verbose, log_rotate_days, log_file,
-                         log_no_color)
+                         log_no_color, logfile_color)
 
     try:
         config_dict = await hass.async_add_executor_job(
@@ -223,7 +227,8 @@ def async_enable_logging(hass: core.HomeAssistant,
                          verbose: bool = False,
                          log_rotate_days: Optional[int] = None,
                          log_file: Optional[str] = None,
-                         log_no_color: bool = False) -> None:
+                         log_no_color: bool = False,
+                         logfile_color: bool = False) -> None:
     """Set up the logging.
 
     This method must be run in the event loop.
@@ -287,7 +292,21 @@ def async_enable_logging(hass: core.HomeAssistant,
                 err_log_path, mode='w', delay=True)
 
         err_handler.setLevel(logging.INFO if verbose else logging.WARNING)
-        err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        if not logfile_color:
+            err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        else:
+            err_handler.setFormatter(ColoredFormatter(
+                colorfmt,
+                datefmt=datefmt,
+                reset=True,
+                log_colors={
+                    'DEBUG': 'cyan',
+                    'INFO': 'green',
+                    'WARNING': 'yellow',
+                    'ERROR': 'red',
+                    'CRITICAL': 'red',
+                }
+            ))
 
         async_handler = AsyncHandler(hass.loop, err_handler)
 

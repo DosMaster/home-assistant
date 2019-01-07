@@ -150,6 +150,10 @@ def get_arguments() -> argparse.Namespace:
         action='store_true',
         help="Disable color logs")
     parser.add_argument(
+        '--logfile-color',
+        action='store_true',
+        help="Enable color file logs")
+    parser.add_argument(
         '--runner',
         action='store_true',
         help='On restart exit with code {}'.format(RESTART_EXIT_CODE))
@@ -273,14 +277,14 @@ async def setup_and_run_hass(config_dir: str,
         bootstrap.async_from_config_dict(
             config, hass, config_dir=config_dir, verbose=args.verbose,
             skip_pip=args.skip_pip, log_rotate_days=args.log_rotate_days,
-            log_file=args.log_file, log_no_color=args.log_no_color)
+            log_file=args.log_file, log_no_color=args.log_no_color, logfile_color=args.logfile_color)
     else:
         config_file = ensure_config_file(config_dir)
         print('Config directory:', config_dir)
         await bootstrap.async_from_config_file(
             config_file, hass, verbose=args.verbose, skip_pip=args.skip_pip,
             log_rotate_days=args.log_rotate_days, log_file=args.log_file,
-            log_no_color=args.log_no_color)
+            log_no_color=args.log_no_color, logfile_color=args.logfile_color)
 
     if args.open_ui:
         # Imported here to avoid importing asyncio before monkey patch
