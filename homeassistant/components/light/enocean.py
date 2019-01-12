@@ -54,12 +54,11 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         self._sender_id = sender_id
         self.dev_id = dev_id
         self._devname = devname
-        self.stype = 'dimmer'
         self.type = type
         if type == 'dimmer':
-            self.stype = "dimmer"
+            self.stype = "light_dimmer"
         else:
-            self.stype = "onoff"
+            self.stype = "light_onoff"
 
     @property
     def name(self):
@@ -87,7 +86,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_on(self, **kwargs):
         """Turn the light source on or sets a specific dimmer value."""
-        if self.stype == "dimmer":
+        if self.stype == "light_dimmer":
             brightness = kwargs.get(ATTR_BRIGHTNESS)
             if brightness is not None:
                 self._brightness = brightness
@@ -106,7 +105,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_off(self, **kwargs):
         """Turn the light source off and sets specific dimmer value."""
-        if self.stype == "dimmer":
+        if self.stype == "light_dimmer":
             brightness = kwargs.get(ATTR_BRIGHTNESS)
             if brightness is not None:
                 self._brightness = brightness
@@ -125,7 +124,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def value_changed(self, val, val2):
         """Update the internal state of this device."""
-        if val2 == 0x09 and val is not None:
+        if val2 == 1 and val is not None:
             self._brightness = math.floor(val / 100.0 * 256.0)
-        self._on_state = bool(val2 == 0x09)
+        self._on_state = bool(val2 == 1)
         self.schedule_update_ha_state()

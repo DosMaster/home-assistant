@@ -78,11 +78,29 @@ class EnOceanDongle:
             value2 = None
             channel = 0
             if temp.data[0] == 0xf6:
-                rxtype = "ft55_status"
-                if temp.data[1] == 0x70:
+                rxtype = "wallswitch"
+                if temp.data[1] == 0x10:
                     value = 1
-                else:
+                    value2 = 0
+                    channel = 1
+                elif temp.data[1] == 0x30:
+                    value = 1
+                    value2 = 1
+                    channel = 1
+                elif temp.data[1] == 0x50:
+                    value = 1
+                    value2 = 0
+                    channel = 2
+                elif temp.data[1] == 0x70:
+                    value = 1
+                    value2 = 1
+                    channel = 2
+                elif temp.data[1] == 0x00:
                     value = 0
+                    value2 = 0
+                    channel = 0
+                else:
+                    rxtype = ""
             else:
                 if temp.data[0] == 0xa5 and temp.data[1] == 0x02:
                     rxtype = "dimmerstatus"
@@ -115,7 +133,7 @@ class EnOceanDongle:
             _LOGGER.debug("Received radio packet(%s): %s", rxtype, temp)
 
             for device in self.__devices:
-                if rxtype == "wallswitch" and device.stype == "listener":
+                if rxtype == "wallswitch" and device.stype == "binary_sensor":
                     if temp.sender_int == self._combine_hex(device.dev_id):
                         device.value_changed(value, temp.data[1])
                 if rxtype == "power" and device.stype == "powersensor":
@@ -132,19 +150,19 @@ class EnOceanDongle:
                         channel == device.channel:
                     if temp.sender_int == self._combine_hex(device.dev_id):
                         device.value_changed(value)
-                if rxtype == "dimmerstatus" and device.stype == "dimmer":
+                if rxtype == "dimmerstatus" and device.stype == "light_dimmer":
                     if temp.sender_int == self._combine_hex(device.dev_id):
-                        device.value_changed(value, value2)
-                if rxtype == "dimmerstatus" and device.stype == "FT55":
+                        device.value_changed(value, value2 & 0x01)
+                if rxtype == "dimmerstatus" and device.stype == "light_onoff":
                     if temp.sender_int == self._combine_hex(device.dev_id):
-                        device.value_changed(value2 & 0x01)
-                if rxtype == "ft55_status" and device.stype == "dimmer":
+                        device.value_changed(None, value2 & 0x01)
+                if rxtype == "wallswitch" and device.stype == "light_dimmer":
                     if temp.sender_int == self._combine_hex(device.dev_id):
-                        device.value_changed(None, 0x08 + value)
-                if rxtype == "ft55_status" and device.stype == "onoff":
+                        device.value_changed(None, value2)
+                if rxtype == "wallswitch" and device.stype == "light_onoff":
                     if temp.sender_int == self._combine_hex(device.dev_id):
-                        device.value_changed(None, 0x08 + value)
-                if rxtype == "ft55_status" and device.stype == "FT55":
+                        device.value_changed(None, value2)
+                if rxtype == "wallswitch" and device.stype == "switch_FT55":
                     if temp.sender_int == self._combine_hex(device.dev_id):
                         device.value_changed(value)
 

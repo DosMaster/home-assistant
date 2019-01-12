@@ -56,10 +56,11 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
         self.channel = channel
         self._sender_id = sender_id
         self.type = type
-        if type == 'switch':
-          self.stype = "switch"
+        if type == 'FT55':
+          self.stype = "switch_FT55"
         else:
-          self.stype = 'FT55'
+          self.stype = "switch"
+
 
     @property
     def is_on(self):
@@ -69,11 +70,7 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
     @property
     def name(self):
         """Return the device name."""
-        if self.type == 'switch':
-          return 'Switch %s' % self._devname
-        else:
-          return 'FT55 %s' % self._devname
-
+        return self._devname
 
     def turn_on(self, **kwargs):
         """Turn on the switch."""
