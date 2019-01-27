@@ -17,7 +17,7 @@ from homeassistant.components.light import (
     SUPPORT_FLASH, SUPPORT_TRANSITION, SUPPORT_WHITE_VALUE, Light)
 from homeassistant.components.mqtt import (
     CONF_COMMAND_TOPIC, CONF_QOS, CONF_RETAIN, CONF_STATE_TOPIC,
-    MqttAttributes, MqttAvailability, MqttDiscoveryUpdate,
+    CONF_UNIQUE_ID, MqttAttributes, MqttAvailability, MqttDiscoveryUpdate,
     MqttEntityDeviceInfo, subscription)
 from homeassistant.const import (
     CONF_BRIGHTNESS, CONF_COLOR_TEMP, CONF_DEVICE, CONF_EFFECT, CONF_NAME,
@@ -25,7 +25,7 @@ from homeassistant.const import (
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.typing import ConfigType, HomeAssistantType
+from homeassistant.helpers.typing import ConfigType
 import homeassistant.util.color as color_util
 
 from .schema_basic import CONF_BRIGHTNESS_SCALE
@@ -54,7 +54,6 @@ CONF_EFFECT_LIST = 'effect_list'
 CONF_FLASH_TIME_LONG = 'flash_time_long'
 CONF_FLASH_TIME_SHORT = 'flash_time_short'
 CONF_HS = 'hs'
-CONF_UNIQUE_ID = 'unique_id'
 
 # Stealing some of these from the base MQTT configs.
 PLATFORM_SCHEMA_JSON = mqtt.MQTT_RW_PLATFORM_SCHEMA.extend({
@@ -85,7 +84,7 @@ PLATFORM_SCHEMA_JSON = mqtt.MQTT_RW_PLATFORM_SCHEMA.extend({
     mqtt.MQTT_JSON_ATTRS_SCHEMA.schema)
 
 
-async def async_setup_entity_json(hass: HomeAssistantType, config: ConfigType,
+async def async_setup_entity_json(config: ConfigType,
                                   async_add_entities, discovery_hash):
     """Set up a MQTT JSON Light."""
     async_add_entities([MqttLightJson(config, discovery_hash)])

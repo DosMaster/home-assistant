@@ -17,8 +17,8 @@ from homeassistant.components.light import (
 from homeassistant.const import (
     CONF_DEVICE, CONF_NAME, CONF_OPTIMISTIC, STATE_ON, STATE_OFF)
 from homeassistant.components.mqtt import (
-    CONF_STATE_TOPIC, CONF_COMMAND_TOPIC, CONF_QOS, CONF_RETAIN,
-    MqttAttributes, MqttAvailability, MqttDiscoveryUpdate,
+    CONF_COMMAND_TOPIC, CONF_QOS, CONF_RETAIN, CONF_STATE_TOPIC,
+    CONF_UNIQUE_ID, MqttAttributes, MqttAvailability, MqttDiscoveryUpdate,
     MqttEntityDeviceInfo, subscription)
 import homeassistant.helpers.config_validation as cv
 import homeassistant.util.color as color_util
@@ -44,7 +44,6 @@ CONF_GREEN_TEMPLATE = 'green_template'
 CONF_RED_TEMPLATE = 'red_template'
 CONF_STATE_TEMPLATE = 'state_template'
 CONF_WHITE_VALUE_TEMPLATE = 'white_value_template'
-CONF_UNIQUE_ID = 'unique_id'
 
 PLATFORM_SCHEMA_TEMPLATE = mqtt.MQTT_RW_PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_BLUE_TEMPLATE): cv.template,
@@ -71,7 +70,7 @@ PLATFORM_SCHEMA_TEMPLATE = mqtt.MQTT_RW_PLATFORM_SCHEMA.extend({
     mqtt.MQTT_JSON_ATTRS_SCHEMA.schema)
 
 
-async def async_setup_entity_template(hass, config, async_add_entities,
+async def async_setup_entity_template(config, async_add_entities,
                                       discovery_hash):
     """Set up a MQTT Template light."""
     async_add_entities([MqttTemplate(config, discovery_hash)])
