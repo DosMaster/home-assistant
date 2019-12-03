@@ -11,7 +11,7 @@ import voluptuous as vol
 
 from homeassistant.components.light import (
     Light, ATTR_BRIGHTNESS, SUPPORT_BRIGHTNESS, PLATFORM_SCHEMA)
-from homeassistant.const import (CONF_NAME, CONF_ID, CONF_TYPE)
+from homeassistant.const import (CONF_NAME, CONF_ID)
 from homeassistant.components import enocean
 import homeassistant.helpers.config_validation as cv
 
@@ -29,7 +29,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.All(cv.ensure_list, [vol.Coerce(int)]),
     vol.Required(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    vol.Optional(CONF_TYPE, default='dimmer'): cv.string,
 })
 
 
@@ -38,15 +37,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     sender_id = config.get(CONF_SENDER_ID)
     devname = config.get(CONF_NAME)
     dev_id = config.get(CONF_ID)
-    type = config.get(CONF_TYPE)
 
-    add_entities([EnOceanLight(sender_id, devname, dev_id, type)])
+    add_entities([EnOceanLight(sender_id, devname, dev_id)])
 
 
 class EnOceanLight(enocean.EnOceanDevice, Light):
     """Representation of an EnOcean light source."""
 
-    def __init__(self, sender_id, devname, dev_id, type):
+    def __init__(self, sender_id, devname, dev_id):
         """Initialize the EnOcean light source."""
         enocean.EnOceanDevice.__init__(self)
         self._on_state = False
@@ -54,11 +52,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         self._sender_id = sender_id
         self.dev_id = dev_id
         self._devname = devname
-        self.type = type
-        if type == 'dimmer':
-            self.stype = "light_dimmer"
-        else:
-            self.stype = "light_onoff"
+        self.stype = 'dimmer'
 
     @property
     def name(self):
@@ -86,45 +80,29 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_on(self, **kwargs):
         """Turn the light source on or sets a specific dimmer value."""
-        if self.stype == "light_dimmer":
-            brightness = kwargs.get(ATTR_BRIGHTNESS)
-            if brightness is not None:
-                self._brightness = brightness
+        brightness = kwargs.get(ATTR_BRIGHTNESS)
+        if brightness is not None:
+            self._brightness = brightness
 
-            bval = math.floor(self._brightness / 256.0 * 100.0)
-            if bval == 0:
-                bval = 1
-            command = [0xa5, 0x02, bval, 0x01, 0x09]
-        else:
-            command = [0xa5, 0x01, 0x00, 0x00, 0x09]
-
+        bval = math.floor(self._brightness / 256.0 * 100.0)
+        if bval == 0:
+            bval = 1
+        command = [0xa5, 0x02, bval, 0x01, 0x09]
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
         self._on_state = True
 
     def turn_off(self, **kwargs):
-        """Turn the light source off and sets specific dimmer value."""
-        if self.stype == "light_dimmer":
-            brightness = kwargs.get(ATTR_BRIGHTNESS)
-            if brightness is not None:
-                self._brightness = brightness
-
-            bval = math.floor(self._brightness / 256.0 * 100.0)
-            if bval == 0:
-                bval = 1
-            command = [0xa5, 0x02, bval, 0x01, 0x08]
-        else:
-            command = [0xa5, 0x01, 0x00, 0x00, 0x08]
-
+        """Turn the light source off."""
+        command = [0xa5, 0x02, 0x00, 0x01, 0x09]
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
         self._on_state = False
 
-    def value_changed(self, val, val2):
+    def value_changed(self, val):
         """Update the internal state of this device."""
-        if val2 == 1 and val is not None:
-            self._brightness = math.floor(val / 100.0 * 256.0)
-        self._on_state = bool(val2 == 1)
+        self._brightness = math.floor(val / 100.0 * 256.0)
+        self._on_state = bool(val != 0)
         self.schedule_update_ha_state()
