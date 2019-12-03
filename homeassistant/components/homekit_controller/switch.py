@@ -1,27 +1,35 @@
-"""
-Support for Homekit switches.
-
-For more details about this platform, please refer to the documentation at
-https://home-assistant.io/components/switch.homekit_controller/
-"""
+"""Support for Homekit switches."""
 import logging
 
-from homeassistant.components.homekit_controller import (HomeKitEntity,
-                                                         KNOWN_ACCESSORIES)
+from homekit.model.characteristics import CharacteristicsTypes
+
 from homeassistant.components.switch import SwitchDevice
 
-DEPENDENCIES = ['homekit_controller']
+from . import KNOWN_DEVICES, HomeKitEntity
 
 OUTLET_IN_USE = "outlet_in_use"
 
 _LOGGER = logging.getLogger(__name__)
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up Homekit switch support."""
-    if discovery_info is not None:
-        accessory = hass.data[KNOWN_ACCESSORIES][discovery_info['serial']]
-        add_entities([HomeKitSwitch(accessory, discovery_info)], True)
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
+    """Legacy set up platform."""
+    pass
+
+
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up Homekit lock."""
+    hkid = config_entry.data["AccessoryPairingID"]
+    conn = hass.data[KNOWN_DEVICES][hkid]
+
+    def async_add_service(aid, service):
+        if service["stype"] not in ("switch", "outlet"):
+            return False
+        info = {"aid": aid, "iid": service["iid"]}
+        async_add_entities([HomeKitSwitch(conn, info)], True)
+        return True
+
+    conn.add_listener(async_add_service)
 
 
 class HomeKitSwitch(HomeKitEntity, SwitchDevice):
@@ -33,45 +41,34 @@ class HomeKitSwitch(HomeKitEntity, SwitchDevice):
         self._on = None
         self._outlet_in_use = None
 
-    def update_characteristics(self, characteristics):
-        """Synchronise the switch state with Home Assistant."""
-        # pylint: disable=import-error
-        from homekit.model.characteristics import CharacteristicsTypes
+    def get_characteristic_types(self):
+        """Define the homekit characteristics the entity cares about."""
+        return [CharacteristicsTypes.ON, CharacteristicsTypes.OUTLET_IN_USE]
 
-        for characteristic in characteristics:
-            ctype = characteristic['type']
-            ctype = CharacteristicsTypes.get_short(ctype)
-            if ctype == "on":
-                self._chars['on'] = characteristic['iid']
-                self._on = characteristic['value']
-            elif ctype == "outlet-in-use":
-                self._chars['outlet-in-use'] = characteristic['iid']
-                self._outlet_in_use = characteristic['value']
+    def _update_on(self, value):
+        self._on = value
+
+    def _update_outlet_in_use(self, value):
+        self._outlet_in_use = value
 
     @property
     def is_on(self):
         """Return true if device is on."""
         return self._on
 
-    def turn_on(self, **kwargs):
+    async def async_turn_on(self, **kwargs):
         """Turn the specified switch on."""
         self._on = True
-        characteristics = [{'aid': self._aid,
-                            'iid': self._chars['on'],
-                            'value': True}]
-        self.put_characteristics(characteristics)
+        characteristics = [{"aid": self._aid, "iid": self._chars["on"], "value": True}]
+        await self._accessory.put_characteristics(characteristics)
 
-    def turn_off(self, **kwargs):
+    async def async_turn_off(self, **kwargs):
         """Turn the specified switch off."""
-        characteristics = [{'aid': self._aid,
-                            'iid': self._chars['on'],
-                            'value': False}]
-        self.put_characteristics(characteristics)
+        characteristics = [{"aid": self._aid, "iid": self._chars["on"], "value": False}]
+        await self._accessory.put_characteristics(characteristics)
 
     @property
     def device_state_attributes(self):
         """Return the optional state attributes."""
         if self._outlet_in_use is not None:
-            return {
-                OUTLET_IN_USE: self._outlet_in_use,
-            }
+            return {OUTLET_IN_USE: self._outlet_in_use}
