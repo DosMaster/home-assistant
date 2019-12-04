@@ -1,3 +1,7 @@
+/homeassistant/config
+config
+/homeassistant/.vscode/*
+
 config/*
 config2/*
 
