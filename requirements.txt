@@ -109,7 +109,7 @@ YesssSMS==0.4.1
 abodepy==0.16.7
 
 # homeassistant.components.mcp23017
-######adafruit-blinka==1.2.1
+adafruit-blinka
 
 # homeassistant.components.mcp23017
 adafruit-circuitpython-mcp230xx==1.1.2
@@ -583,7 +583,7 @@ gitterpy==0.1.7
 glances_api==0.2.0
 
 # homeassistant.components.gntp
-######gntp==1.0.3
+gntp==1.0.3
 
 # homeassistant.components.google
 google-api-python-client==1.6.4

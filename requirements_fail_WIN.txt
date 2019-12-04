@@ -1,0 +1,33 @@
+# homeassistant.components.mcp23017
+adafruit-blinka==1.2.1
+
+# homeassistant.components.stream
+av==6.1.2
+
+# homeassistant.components.avea
+avea==1.4
+
+# homeassistant.components.beewi_smartclim
+beewi_smartclim==0.0.7
+
+# homeassistant.components.dovado
+dovado==0.4.1
+
+# homeassistant.components.google_pubsub
+google-cloud-pubsub==0.39.1
+
+# homeassistant.components.google_cloud
+google-cloud-texttospeech==0.4.0
+
+# homeassistant.components.zwave
+homeassistant-pyozw==0.1.6
+
+# homeassistant.components.pcal9535a
+pcal9535a==0.7
+
+# homeassistant.components.fronius
+pyfronius==0.4.6
+
+# homeassistant.components.tradfri
+pytradfri[async]==6.4.0
+
