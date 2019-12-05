@@ -48,6 +48,7 @@ async def async_from_config_dict(
     log_rotate_days: Any = None,
     log_file: Any = None,
     log_no_color: bool = False,
+    logfile_color: bool = False,
 ) -> Optional[core.HomeAssistant]:
     """Try to configure Home Assistant from a configuration dictionary.
 
@@ -57,7 +58,7 @@ async def async_from_config_dict(
     start = time()
 
     if enable_log:
-        async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color)
+        async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color)
 
     hass.config.skip_pip = skip_pip
     if skip_pip:
@@ -117,6 +118,7 @@ async def async_from_config_file(
     log_rotate_days: Any = None,
     log_file: Any = None,
     log_no_color: bool = False,
+    logfile_color: bool = False,
 ) -> Optional[core.HomeAssistant]:
     """Read the configuration file and try to start all the functionality.
 
@@ -130,7 +132,7 @@ async def async_from_config_file(
     if not is_virtual_env():
         await async_mount_local_lib_path(config_dir)
 
-    async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color)
+    async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color)
 
     await hass.async_add_executor_job(conf_util.process_ha_config_upgrade, hass)
 
@@ -156,6 +158,7 @@ def async_enable_logging(
     log_rotate_days: Optional[int] = None,
     log_file: Optional[str] = None,
     log_no_color: bool = False,
+    logfile_color: bool = False,
 ) -> None:
     """Set up the logging.
 
@@ -222,7 +225,21 @@ def async_enable_logging(
             err_handler = logging.FileHandler(err_log_path, mode="w", delay=True)
 
         err_handler.setLevel(logging.INFO if verbose else logging.WARNING)
-        err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        if not logfile_color:
+            err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        else:
+            err_handler.setFormatter(ColoredFormatter(
+                colorfmt,
+                datefmt=datefmt,
+                reset=True,
+                log_colors={
+                    'DEBUG': 'cyan',
+                    'INFO': 'green',
+                    'WARNING': 'yellow',
+                    'ERROR': 'red',
+                    'CRITICAL': 'red',
+                }
+            ))
 
         async_handler = AsyncHandler(hass.loop, err_handler)
 
