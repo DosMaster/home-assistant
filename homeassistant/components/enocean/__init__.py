@@ -88,5 +88,4 @@ class EnOceanDevice(Entity):
         """Send a command via the EnOcean dongle."""
 
         packet = Packet(packet_type, data=data, optional=optional)
-        _LOGGER.debug("Sending radio packet: %s", packet)
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
