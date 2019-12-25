@@ -132,34 +132,50 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
     def turn_on(self, **kwargs):
         """Turn on the switch."""
         if self.channel == 0:
-            data = 0x30
-        else:
             data = 0x70
-        command = [0xF6, data]
-        command.extend(self.dev_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
-        command = [0xF6, 0x00]
-        command.extend(self.dev_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
-        self._on_state = True
+        elif self.channel == 1:
+            data = 0x30
+        elif self.channel == 10:
+            data = 0x37
+        else:
+            data = 0x00
+
+        if data > 0x00:
+            command = [0xF6, data]
+            command.extend(self.dev_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
+            command = [0xF6, 0x00]
+            command.extend(self.dev_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
+            self._on_state = True
+        else:
+            _LOGGER.error("Unsupported channel: %s (%s)", self.channel, self.dev_name)
 
     def turn_off(self, **kwargs):
         """Turn off the switch."""
         if self.channel == 0:
-            data = 0x10
-        else:
             data = 0x50
-        command = [0xF6, data]
-        command.extend(self.dev_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
-        command = [0xF6, 0x00]
-        command.extend(self.dev_id)
-        command.extend([0x00])
-        self.send_command(command, [], 0x01)
-        self._on_state = False
+        elif self.channel == 1:
+            data = 0x10
+        elif self.channel == 10:
+            data = 0x15
+        else:
+            data = 0x00
+
+        if data > 0x00:
+            command = [0xF6, data]
+            command.extend(self.dev_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
+            command = [0xF6, 0x00]
+            command.extend(self.dev_id)
+            command.extend([0x00])
+            self.send_command(command, [], 0x01)
+            self._on_state = False
+        else:
+            _LOGGER.error("Unsupported channel: %s (%s)", self.channel, self.dev_name)
 
     def value_changed(self, packet):
         """Update the internal state of the switch."""
