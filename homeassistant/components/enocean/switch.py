@@ -12,6 +12,8 @@ from homeassistant.helpers.entity import ToggleEntity
 _LOGGER = logging.getLogger(__name__)
 
 CONF_CHANNEL = "channel"
+CONF_SENDER_ID = "sender_id"
+
 DEFAULT_NAME = "EnOcean Switch"
 
 DEVICE_CLASS_SWITCH = "switch"
@@ -23,6 +25,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_CHANNEL, default=0): cv.positive_int,
         vol.Optional(CONF_DEVICE_CLASS, default=DEVICE_CLASS_SWITCH): cv.string,
+        vol.Optional(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
     }
 )
 
@@ -37,7 +40,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     if dev_class == DEVICE_CLASS_SWITCH:
         add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
     elif dev_class == DEVICE_CLASS_SWITCH_ELTAKO:
-        add_entities([EnOceanSwitchEltako(dev_id, dev_name, channel)])
+        sender_id = config.get(CONF_SENDER_ID)
+        add_entities([EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)])
 
 
 class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
@@ -111,13 +115,17 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
 class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
     """Representation of an EnOcean switch device."""
 
-    def __init__(self, dev_id, dev_name, channel):
+    def __init__(self, dev_id, dev_name, channel, sender_id):
         """Initialize the EnOcean switch device."""
         super().__init__(dev_id, dev_name)
         self._light = None
         self._on_state = False
         self._on_state2 = False
         self.channel = channel
+        self._sender_id = sender_id
+
+        if self._sender_id is None:
+            self._sender_id = dev_id
 
     @property
     def is_on(self):
@@ -142,11 +150,11 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
 
         if data > 0x00:
             command = [0xF6, data]
-            command.extend(self.dev_id)
+            command.extend(self._sender_id)
             command.extend([0x00])
             self.send_command(command, [], 0x01)
             command = [0xF6, 0x00]
-            command.extend(self.dev_id)
+            command.extend(self._sender_id)
             command.extend([0x00])
             self.send_command(command, [], 0x01)
             self._on_state = True
@@ -166,11 +174,11 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
 
         if data > 0x00:
             command = [0xF6, data]
-            command.extend(self.dev_id)
+            command.extend(self._sender_id)
             command.extend([0x00])
             self.send_command(command, [], 0x01)
             command = [0xF6, 0x00]
-            command.extend(self.dev_id)
+            command.extend(self._sender_id)
             command.extend([0x00])
             self.send_command(command, [], 0x01)
             self._on_state = False
@@ -198,3 +206,37 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
                 if channel == self.channel:
                     self._on_state = output > 0
                     self.schedule_update_ha_state()
+        elif packet.data[0] == 0xF6:
+            # rocker switch telegram
+            packet.parse_eep(0x02, 0x02)
+            rocker_action = (
+                (packet.parsed["R1"]["raw_value"] << 5)
+                + (packet.parsed["EB"]["raw_value"] << 4)
+                + (packet.parsed["R2"]["raw_value"] << 1)
+                + packet.parsed["SA"]["raw_value"]
+            )
+            if rocker_action == 0x70:
+                state = True
+                channel = 0
+            elif rocker_action == 0x30:
+                state = True
+                channel = 1
+            elif rocker_action == 0x37:
+                state = True
+                channel = 10
+            elif rocker_action == 0x50:
+                state = False
+                channel = 0
+            elif rocker_action == 0x10:
+                state = False
+                channel = 1
+            elif rocker_action == 0x15:
+                state = False
+                channel = 10
+            else:
+                state = False
+                channel = 99
+
+        if channel == self.channel:
+            self._on_state = state
+            self.schedule_update_ha_state()
