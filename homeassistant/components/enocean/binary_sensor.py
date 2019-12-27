@@ -102,6 +102,10 @@ class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
         elif action == 0x15:
             self.which = 10
             self.onoff = 1
+        elif action == 0x00:
+            self.which = -1
+            self.onoff = -1
+
         self.hass.bus.fire(
             EVENT_BUTTON_PRESSED,
             {
