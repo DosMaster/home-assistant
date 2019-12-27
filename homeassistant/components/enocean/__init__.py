@@ -3,6 +3,7 @@ import logging
 
 from enocean.communicators.serialcommunicator import SerialCommunicator
 from enocean.protocol.packet import Packet, RadioPacket
+import enocean.utils
 from enocean.utils import combine_hex
 import voluptuous as vol
 
@@ -87,6 +88,20 @@ class EnOceanDevice(Entity):
     def send_command(self, data, optional, packet_type):
         """Send a command via the EnOcean dongle."""
 
+        if data[0] == 0xF6 or data[0] == 0xD5:
+            sender = data[2:6]
+        elif data[0] == 0xA5:
+            sender = data[5:9]
+        else:
+            sender = [0x00, 0x00, 0x00, 0x00]
+
+        receiver = [0xFF, 0xFF, 0xFF, 0xFF]
+
         packet = Packet(packet_type, data=data, optional=optional)
-        _LOGGER.debug("Sending radio packet: %s", packet)
+        _LOGGER.debug(
+            "Sending radio packet: %s->%s %s",
+            enocean.utils.to_hex_string(sender),
+            enocean.utils.to_hex_string(receiver),
+            packet,
+        )
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
