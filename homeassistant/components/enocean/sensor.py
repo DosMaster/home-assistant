@@ -26,6 +26,8 @@ CONF_RANGE_TO = "range_to"
 DEFAULT_NAME = "EnOcean sensor"
 
 DEVICE_CLASS_POWER = "powersensor"
+DEVICE_CLASS_LIGHT = "lightsensor"
+CONF_DEVICE_TYPE = "device_type"
 
 SENSOR_TYPES = {
     DEVICE_CLASS_HUMIDITY: {
@@ -46,6 +48,12 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "class": DEVICE_CLASS_TEMPERATURE,
     },
+    DEVICE_CLASS_LIGHT: {
+        "name": "Light",
+        "unit": "lx",
+        "icon": "mdi:brightness-6",
+        "class": DEVICE_CLASS_LIGHT,
+    },
 }
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -57,6 +65,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_MIN_TEMP, default=0): vol.Coerce(int),
         vol.Optional(CONF_RANGE_FROM, default=255): cv.positive_int,
         vol.Optional(CONF_RANGE_TO, default=0): cv.positive_int,
+        vol.Optional(CONF_DEVICE_TYPE, default="std"): cv.string,
     }
 )
 
@@ -85,6 +94,10 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
     elif dev_class == DEVICE_CLASS_POWER:
         add_entities([EnOceanPowerSensor(dev_id, dev_name)])
+
+    elif dev_class == DEVICE_CLASS_LIGHT:
+        dev_type = config.get(CONF_DEVICE_TYPE)
+        add_entities([EnOceanLightSensor(dev_id, dev_name, dev_type)])
 
 
 class EnOceanSensor(enocean.EnOceanDevice):
@@ -213,4 +226,55 @@ class EnOceanHumiditySensor(EnOceanSensor):
             return
         humidity = packet.data[2] * 100 / 250
         self._state = round(humidity, 1)
+        self.schedule_update_ha_state()
+
+
+class EnOceanLightSensor(EnOceanSensor):
+    """Representation of an EnOcean light sensor device.
+
+    EEPs (EnOcean Equipment Profiles):
+    - A5-06-01 (Light Sensor 300-30.000lx)
+
+    Additional Support For:
+    - FAH60 (Eltako)    use "device_type: FAH60"
+    """
+
+    def __init__(self, dev_id, dev_name, dev_type):
+        """Initialize the EnOcean light sensor device."""
+        super().__init__(dev_id, dev_name, DEVICE_CLASS_LIGHT)
+        # self._scale_min = 300
+        # self._scale_max = 30000
+        # self._scale_min = 300
+        # self._scale_max = 30000
+        # self.range_from = 0
+        # self.range_to = 255
+        # light_scale = self._scale_max - self._scale_min
+        # light_range = self.range_to - self.range_from
+        # raw_val = packet.data[3]
+        # light = light_scale / light_range * (raw_val - self.range_from)
+        # light += self._scale_min
+
+        if dev_type.lower() == "std" or dev_type.lower() == "fah60":
+            self.dev_type = dev_type.lower()
+        else:
+            self.dev_type = None
+            _LOGGER.warning('device_type "%s" (%s) unknown', dev_type, dev_name)
+
+    def value_changed(self, packet):
+        """Update the internal state of the sensor."""
+        if packet.data[0] != 0xA5 or packet.data[3] == 0x87:
+            return
+        raw_val = packet.data[2]
+        raw_val2 = packet.data[1]
+        if self.dev_type == "fah60" and raw_val == 0:
+            light_scale = 100 - 0
+            light_range = 100 - 0
+            light = light_scale / light_range * (raw_val2 - 0)
+            light += 0
+        else:
+            light_scale = 30000 - 300
+            light_range = 255 - 0
+            light = light_scale / light_range * (raw_val - 0)
+            light += 300
+        self._state = round(light, 0)
         self.schedule_update_ha_state()
