@@ -10,6 +10,8 @@ from homeassistant.const import (
     CONF_ID,
     CONF_NAME,
     DEVICE_CLASS_HUMIDITY,
+    DEVICE_CLASS_ILLUMINANCE,
+    DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
     POWER_WATT,
     TEMP_CELSIUS,
@@ -25,9 +27,10 @@ CONF_RANGE_TO = "range_to"
 
 DEFAULT_NAME = "EnOcean sensor"
 
-DEVICE_CLASS_POWER = "powersensor"
-DEVICE_CLASS_LIGHT = "lightsensor"
+# Use stadard for HA "power"
+# #DEVICE_CLASS_POWER = "powersensor"
 CONF_DEVICE_TYPE = "device_type"
+EVENT_PIR_CHANGED = "pir_changed"
 
 SENSOR_TYPES = {
     DEVICE_CLASS_HUMIDITY: {
@@ -48,11 +51,11 @@ SENSOR_TYPES = {
         "icon": "mdi:thermometer",
         "class": DEVICE_CLASS_TEMPERATURE,
     },
-    DEVICE_CLASS_LIGHT: {
-        "name": "Light",
+    DEVICE_CLASS_ILLUMINANCE: {
+        "name": "Illuminance",
         "unit": "lx",
         "icon": "mdi:brightness-6",
-        "class": DEVICE_CLASS_LIGHT,
+        "class": DEVICE_CLASS_ILLUMINANCE,
     },
 }
 
@@ -95,9 +98,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     elif dev_class == DEVICE_CLASS_POWER:
         add_entities([EnOceanPowerSensor(dev_id, dev_name)])
 
-    elif dev_class == DEVICE_CLASS_LIGHT:
+    elif dev_class == DEVICE_CLASS_ILLUMINANCE:
         dev_type = config.get(CONF_DEVICE_TYPE)
-        add_entities([EnOceanLightSensor(dev_id, dev_name, dev_type)])
+        add_entities([EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)])
 
 
 class EnOceanSensor(enocean.EnOceanDevice):
@@ -229,32 +232,37 @@ class EnOceanHumiditySensor(EnOceanSensor):
         self.schedule_update_ha_state()
 
 
-class EnOceanLightSensor(EnOceanSensor):
-    """Representation of an EnOcean light sensor device.
+class EnOceanIlluminanceSensor(EnOceanSensor):
+    """Representation of an EnOcean Illuminance sensor device.
 
     EEPs (EnOcean Equipment Profiles):
-    - A5-06-01 (Light Sensor 300-30.000lx)
+    - A5-06-01 (Illuminance Sensor 300-30.000lx)
 
     Additional Support For:
     - FAH60 (Eltako)    use "device_type: FAH60"
+    - FBH63 (Eltako)
     """
 
     def __init__(self, dev_id, dev_name, dev_type):
-        """Initialize the EnOcean light sensor device."""
-        super().__init__(dev_id, dev_name, DEVICE_CLASS_LIGHT)
+        """Initialize the EnOcean Illuminance sensor device."""
+        super().__init__(dev_id, dev_name, DEVICE_CLASS_ILLUMINANCE)
         # self._scale_min = 300
         # self._scale_max = 30000
         # self._scale_min = 300
         # self._scale_max = 30000
         # self.range_from = 0
         # self.range_to = 255
-        # light_scale = self._scale_max - self._scale_min
-        # light_range = self.range_to - self.range_from
+        # Illuminance_scale = self._scale_max - self._scale_min
+        # Illuminance_range = self.range_to - self.range_from
         # raw_val = packet.data[3]
-        # light = light_scale / light_range * (raw_val - self.range_from)
-        # light += self._scale_min
+        # Illuminance = Illuminance_scale / Illuminance_range * (raw_val - self.range_from)
+        # Illuminance += self._scale_min
 
-        if dev_type.lower() == "std" or dev_type.lower() == "fah60":
+        if (
+            dev_type.lower() == "std"
+            or dev_type.lower() == "fah60"
+            or dev_type.lower() == "fbh63"
+        ):
             self.dev_type = dev_type.lower()
         else:
             self.dev_type = None
@@ -262,19 +270,47 @@ class EnOceanLightSensor(EnOceanSensor):
 
     def value_changed(self, packet):
         """Update the internal state of the sensor."""
-        if packet.data[0] != 0xA5 or packet.data[3] == 0x87:
+        if (
+            packet.data[0] != 0xA5
+            or (self.dev_type == "fah60" and packet.data[3] == 0x87)
+            or (self.dev_type == "fbh63" and packet.data[4] == 0x85)
+        ):
             return
         raw_val = packet.data[2]
         raw_val2 = packet.data[1]
         if self.dev_type == "fah60" and raw_val == 0:
-            light_scale = 100 - 0
-            light_range = 100 - 0
-            light = light_scale / light_range * (raw_val2 - 0)
-            light += 0
+            Illuminance_scale = 100 - 0
+            Illuminance_range = 100 - 0
+            Illuminance = Illuminance_scale / Illuminance_range * (raw_val2 - 0)
+            Illuminance += 0
+        elif self.dev_type == "fbh63":
+            Illuminance_scale = 2048 - 0
+            Illuminance_range = 255 - 0
+            Illuminance = Illuminance_scale / Illuminance_range * (raw_val - 0)
+            Illuminance += 0
+            motion = packet.data[4] == 0x0D
+            self.hass.bus.fire(
+                EVENT_PIR_CHANGED,
+                {
+                    "id": self.dev_id,
+                    "pushed": 1,
+                    "which": self.which,
+                    "onoff": self.onoff,
+                },
+            )
+            self.hass.bus.fire(
+                EVENT_PIR_CHANGED,
+                {
+                    "id": self.dev_id,
+                    "pushed": motion,
+                    "which": self.which,
+                    "onoff": self.onoff,
+                },
+            )
         else:
-            light_scale = 30000 - 300
-            light_range = 255 - 0
-            light = light_scale / light_range * (raw_val - 0)
-            light += 300
-        self._state = round(light, 0)
+            Illuminance_scale = 30000 - 300
+            Illuminance_range = 255 - 0
+            Illuminance = Illuminance_scale / Illuminance_range * (raw_val - 0)
+            Illuminance += 300
+        self._state = round(Illuminance, 0)
         self.schedule_update_ha_state()
