@@ -289,24 +289,7 @@ class EnOceanIlluminanceSensor(EnOceanSensor):
             Illuminance = Illuminance_scale / Illuminance_range * (raw_val - 0)
             Illuminance += 0
             motion = packet.data[4] == 0x0D
-            self.hass.bus.fire(
-                EVENT_PIR_CHANGED,
-                {
-                    "id": self.dev_id,
-                    "pushed": 1,
-                    "which": self.which,
-                    "onoff": self.onoff,
-                },
-            )
-            self.hass.bus.fire(
-                EVENT_PIR_CHANGED,
-                {
-                    "id": self.dev_id,
-                    "pushed": motion,
-                    "which": self.which,
-                    "onoff": self.onoff,
-                },
-            )
+            self.hass.bus.fire(EVENT_PIR_CHANGED, {"id": self.dev_id, "pushed": motion})
         else:
             Illuminance_scale = 30000 - 300
             Illuminance_range = 255 - 0
