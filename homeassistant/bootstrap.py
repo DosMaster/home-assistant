@@ -31,7 +31,7 @@ DATA_LOGGING = "logging"
 
 DEBUGGER_INTEGRATIONS = {"ptvsd"}
 CORE_INTEGRATIONS = ("homeassistant", "persistent_notification")
-LOGGING_INTEGRATIONS = {"logger", "system_log"}
+LOGGING_INTEGRATIONS = {"logger", "system_log", "sentry"}
 STAGE_1_INTEGRATIONS = {
     # To record data
     "recorder",
@@ -62,12 +62,14 @@ async def async_from_config_dict(
     start = time()
 
     if enable_log:
-        async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color)
+        async_enable_logging(
+            hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color
+        )
 
     hass.config.skip_pip = skip_pip
     if skip_pip:
         _LOGGER.warning(
-            "Skipping pip installation of required modules. " "This may cause issues"
+            "Skipping pip installation of required modules. This may cause issues"
         )
 
     core_config = config.get(core.DOMAIN, {})
@@ -139,7 +141,9 @@ async def async_from_config_file(
     if not is_virtual_env():
         await async_mount_local_lib_path(config_dir)
 
-    async_enable_logging(hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color)
+    async_enable_logging(
+        hass, verbose, log_rotate_days, log_file, log_no_color, logfile_color
+    )
 
     await hass.async_add_executor_job(conf_util.process_ha_config_upgrade, hass)
 
@@ -171,7 +175,7 @@ def async_enable_logging(
 
     This method must be run in the event loop.
     """
-    fmt = "%(asctime)s %(levelname)s (%(threadName)s) " "[%(name)s] %(message)s"
+    fmt = "%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s"
     datefmt = "%Y-%m-%d %H:%M:%S"
 
     if not log_no_color:
@@ -235,18 +239,20 @@ def async_enable_logging(
         if not logfile_color:
             err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
         else:
-            err_handler.setFormatter(ColoredFormatter(
-                colorfmt,
-                datefmt=datefmt,
-                reset=True,
-                log_colors={
-                    'DEBUG': 'cyan',
-                    'INFO': 'green',
-                    'WARNING': 'yellow',
-                    'ERROR': 'red',
-                    'CRITICAL': 'red',
-                }
-            ))
+            err_handler.setFormatter(
+                ColoredFormatter(
+                    colorfmt,
+                    datefmt=datefmt,
+                    reset=True,
+                    log_colors={
+                        "DEBUG": "cyan",
+                        "INFO": "green",
+                        "WARNING": "yellow",
+                        "ERROR": "red",
+                        "CRITICAL": "red",
+                    },
+                )
+            )
 
         async_handler = AsyncHandler(hass.loop, err_handler)
 
