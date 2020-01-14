@@ -153,9 +153,8 @@ def get_arguments() -> argparse.Namespace:
         "--log-no-color", action="store_true", help="Disable color logs"
     )
     parser.add_argument(
-        '--logfile-color',
-        action='store_true',
-        help="Enable color file logs")
+        "--logfile-color", action="store_true", help="Enable color file logs"
+    )
     parser.add_argument(
         "--runner",
         action="store_true",
@@ -267,6 +266,7 @@ async def setup_and_run_hass(config_dir: str, args: argparse.Namespace) -> int:
     """Set up HASS and run."""
     from homeassistant import bootstrap, core
 
+    print("Version: %s" % __version__)
     hass = core.HomeAssistant()
 
     if args.demo_mode:
