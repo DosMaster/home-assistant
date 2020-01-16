@@ -69,7 +69,7 @@ aiohue==1.10.1
 aionotion==1.1.0
 
 # homeassistant.components.webostv
-aiopylgtv==0.2.4
+aiopylgtv==0.2.6
 
 # homeassistant.components.switcher_kis
 aioswitcher==2019.4.26
@@ -442,7 +442,7 @@ pyhaversion==3.1.0
 pyheos==0.6.0
 
 # homeassistant.components.homematic
-pyhomematic==0.1.62
+pyhomematic==0.1.63
 
 # homeassistant.components.icloud
 pyicloud==0.9.1
@@ -567,7 +567,7 @@ restrictedpython==5.0
 rflink==0.0.50
 
 # homeassistant.components.ring
-ring_doorbell==0.2.9
+ring_doorbell==0.6.0
 
 # homeassistant.components.yamaha
 rxv==0.6.0
@@ -616,7 +616,7 @@ sunwatcher==0.2.1
 tellduslive==0.10.10
 
 # homeassistant.components.tesla
-teslajsonpy==0.2.2
+teslajsonpy==0.2.3
 
 # homeassistant.components.toon
 toonapilib==3.2.4
@@ -673,7 +673,7 @@ yahooweather==0.10
 zeroconf==0.24.4
 
 # homeassistant.components.zha
-zha-quirks==0.0.30
+zha-quirks==0.0.31
 
 # homeassistant.components.zha
 zigpy-deconz==0.7.0
