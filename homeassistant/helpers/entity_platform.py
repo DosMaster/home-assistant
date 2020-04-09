@@ -331,6 +331,8 @@ class EntityPlatform:
                     "name",
                     "sw_version",
                     "via_device",
+                    # #dm
+                    "area_id",
                 ):
                     if key in device_info:
                         processed_dev_info[key] = device_info[key]

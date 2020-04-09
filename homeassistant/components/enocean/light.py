@@ -3,15 +3,26 @@ import logging
 
 import voluptuous as vol
 
+# from homeassistant.core import callback
+# dm
+# dm
+# from homeassistant import config_entries
 from homeassistant.components import enocean
-from homeassistant.components.light import (
+from homeassistant.components.enocean import PLATFORM_SCHEMA
+from homeassistant.const import CONF_ID, CONF_NAME
+import homeassistant.helpers.area_registry as ar
+import homeassistant.helpers.config_validation as cv
+
+# import homeassistant.helpers.device_registry as dr
+
+# from . import DATA_ENOCEAN_CONFIG_ID, DOMAIN
+
+from homeassistant.components.light import (  # dm; PLATFORM_SCHEMA,
     ATTR_BRIGHTNESS,
-    PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     Light,
 )
-from homeassistant.const import CONF_ID, CONF_NAME
-import homeassistant.helpers.config_validation as cv
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -20,6 +31,7 @@ CONF_SENDER_ID = "sender_id"
 DEFAULT_NAME = "EnOcean Light"
 SUPPORT_ENOCEAN = SUPPORT_BRIGHTNESS
 CONF_DEVICE_TYPE = "device_type"
+
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -31,6 +43,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
+entities = []
+
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the EnOcean light platform."""
     sender_id = config.get(CONF_SENDER_ID)
@@ -38,7 +53,11 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     dev_id = config.get(CONF_ID)
     dev_type = config.get(CONF_DEVICE_TYPE)
 
-    add_entities([EnOceanLight(sender_id, dev_id, dev_name, dev_type)])
+    # add_entities([EnOceanLight(sender_id, dev_id, dev_name, dev_type)])
+
+    # dm
+    entity = EnOceanLight(sender_id, dev_id, dev_name, dev_type)
+    setup_platform_dm(hass, config, add_entities, entity)
 
 
 class EnOceanLight(enocean.EnOceanDevice, Light):
@@ -46,7 +65,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def __init__(self, sender_id, dev_id, dev_name, dev_type):
         """Initialize the EnOcean light source."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(dev_id, dev_name, __name__)
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
@@ -127,3 +146,30 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
                 self._on_state = bool(val != 0)
 
             self.schedule_update_ha_state()
+
+
+# dm
+def setup_platform_dm(hass, config, add_entities, entity):
+    """Set platform."""
+    entity._area_name = config.get("area_name")
+    entity._manufacturer = config.get("manufacturer")
+    entity._model = config.get("model")
+    entities.append(entity)
+
+
+# dm
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the EnOcean config entry."""
+
+    area_registry = await ar.async_get_registry(hass)
+
+    areas = area_registry.async_list_areas()
+
+    for entity in entities:
+        for area in areas:
+            if entity._area_name:
+                if entity.area_name.lower() == area.name.lower():
+                    entity._area_id = area.id
+                    entity._area_name = entity.area_name
+
+    async_add_entities(entities, True)

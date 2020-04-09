@@ -3,8 +3,14 @@ import logging
 
 import voluptuous as vol
 
+# from homeassistant.core import callback
+# dm
+# dm
+# dm
+# from homeassistant.components.sensor import PLATFORM_SCHEMA
+# from homeassistant import config_entries
 from homeassistant.components import enocean
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.enocean import PLATFORM_SCHEMA
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ID,
@@ -18,7 +24,12 @@ from homeassistant.const import (
     STATE_OPEN,
     TEMP_CELSIUS,
 )
+import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
+
+# import homeassistant.helpers.device_registry as dr
+
+# from . import DATA_ENOCEAN_CONFIG_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -85,37 +96,67 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
+entities = []
+
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up an EnOcean sensor device."""
     dev_id = config.get(CONF_ID)
     dev_name = config.get(CONF_NAME)
     sensor_type = config.get(CONF_DEVICE_CLASS)
 
+    # if sensor_type == SENSOR_TYPE_TEMPERATURE:
+    #     temp_min = config.get(CONF_MIN_TEMP)
+    #     temp_max = config.get(CONF_MAX_TEMP)
+    #     range_from = config.get(CONF_RANGE_FROM)
+    #     range_to = config.get(CONF_RANGE_TO)
+    #     add_entities(
+    #         [
+    #             EnOceanTemperatureSensor(
+    #                 dev_id, dev_name, temp_min, temp_max, range_from, range_to
+    #             )
+    #         ]
+    #     )
+
+    # elif sensor_type == SENSOR_TYPE_HUMIDITY:
+    #     add_entities([EnOceanHumiditySensor(dev_id, dev_name)])
+
+    # elif sensor_type == SENSOR_TYPE_POWER:
+    #     add_entities([EnOceanPowerSensor(dev_id, dev_name)])
+
+    # elif sensor_type == SENSOR_TYPE_WINDOWHANDLE:
+    #     add_entities([EnOceanWindowHandle(dev_id, dev_name)])
+
+    # elif sensor_type == SENSOR_TYPE_ILLUMINANCE:
+    #     dev_type = config.get(CONF_DEVICE_TYPE)
+    #     add_entities([EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)])
+
+    # dm
+    entity = None
     if sensor_type == SENSOR_TYPE_TEMPERATURE:
         temp_min = config.get(CONF_MIN_TEMP)
         temp_max = config.get(CONF_MAX_TEMP)
         range_from = config.get(CONF_RANGE_FROM)
         range_to = config.get(CONF_RANGE_TO)
-        add_entities(
-            [
-                EnOceanTemperatureSensor(
-                    dev_id, dev_name, temp_min, temp_max, range_from, range_to
-                )
-            ]
+        entity = EnOceanTemperatureSensor(
+            dev_id, dev_name, temp_min, temp_max, range_from, range_to
         )
 
     elif sensor_type == SENSOR_TYPE_HUMIDITY:
-        add_entities([EnOceanHumiditySensor(dev_id, dev_name)])
+        entity = EnOceanHumiditySensor(dev_id, dev_name)
 
     elif sensor_type == SENSOR_TYPE_POWER:
-        add_entities([EnOceanPowerSensor(dev_id, dev_name)])
+        entity = EnOceanPowerSensor(dev_id, dev_name)
 
     elif sensor_type == SENSOR_TYPE_WINDOWHANDLE:
-        add_entities([EnOceanWindowHandle(dev_id, dev_name)])
+        entity = EnOceanWindowHandle(dev_id, dev_name)
 
     elif sensor_type == SENSOR_TYPE_ILLUMINANCE:
         dev_type = config.get(CONF_DEVICE_TYPE)
-        add_entities([EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)])
+        entity = EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)
+
+    if entity:
+        setup_platform_dm(hass, config, add_entities, entity)
 
 
 class EnOceanSensor(enocean.EnOceanDevice):
@@ -123,7 +164,7 @@ class EnOceanSensor(enocean.EnOceanDevice):
 
     def __init__(self, dev_id, dev_name, sensor_type):
         """Initialize the EnOcean sensor device."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(dev_id, dev_name, __name__)
         self._sensor_type = sensor_type
         self._device_class = SENSOR_TYPES[self._sensor_type]["class"]
         self._dev_name = "{} {}".format(
@@ -338,3 +379,30 @@ class EnOceanIlluminanceSensor(EnOceanSensor):
             Illuminance += 300
         self._state = round(Illuminance, 0)
         self.schedule_update_ha_state()
+
+
+# dm
+def setup_platform_dm(hass, config, add_entities, entity):
+    """Set platform entry."""
+    entity._area_name = config.get("area_name")
+    entity._manufacturer = config.get("manufacturer")
+    entity._model = config.get("model")
+    entities.append(entity)
+
+
+# dm
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the EnOcean config entry."""
+
+    area_registry = await ar.async_get_registry(hass)
+
+    areas = area_registry.async_list_areas()
+
+    for entity in entities:
+        for area in areas:
+            if entity._area_name:
+                if entity.area_name.lower() == area.name.lower():
+                    entity._area_id = area.id
+                    entity._area_name = entity.area_name
+
+    async_add_entities(entities, True)

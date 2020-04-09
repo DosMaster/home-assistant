@@ -3,11 +3,21 @@ import logging
 
 import voluptuous as vol
 
+# from homeassistant.core import callback
+# dm
+# dm
+# dm
+# from homeassistant.components.switch import PLATFORM_SCHEMA
+# from homeassistant import config_entries
+# import homeassistant.helpers.device_registry as dr
 from homeassistant.components import enocean
-from homeassistant.components.switch import PLATFORM_SCHEMA
+from homeassistant.components.enocean import PLATFORM_SCHEMA
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
+import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ToggleEntity
+
+# from . import DATA_ENOCEAN_CONFIG_ID, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -18,6 +28,7 @@ DEFAULT_NAME = "EnOcean Switch"
 
 DEVICE_CLASS_SWITCH = "switch"
 DEVICE_CLASS_SWITCH_ELTAKO = "switch_eltako"
+
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -30,6 +41,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
+entities = []
+
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the EnOcean switch platform."""
     channel = config.get(CONF_CHANNEL)
@@ -37,11 +51,21 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     dev_name = config.get(CONF_NAME)
     dev_class = config.get(CONF_DEVICE_CLASS)
 
+    # dm
+    # if dev_class == DEVICE_CLASS_SWITCH:
+    #     add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
+    # elif dev_class == DEVICE_CLASS_SWITCH_ELTAKO:
+    #     sender_id = config.get(CONF_SENDER_ID)
+    #     add_entities([EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)])
+
+    # dm
     if dev_class == DEVICE_CLASS_SWITCH:
-        add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
+        entity = EnOceanSwitch(dev_id, dev_name, channel)
     elif dev_class == DEVICE_CLASS_SWITCH_ELTAKO:
         sender_id = config.get(CONF_SENDER_ID)
-        add_entities([EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)])
+        entity = EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)
+    # dm
+    setup_platform_dm(hass, config, add_entities, entity)
 
 
 class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
@@ -54,6 +78,9 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
         self._on_state = False
         self._on_state2 = False
         self.channel = channel
+
+        if self.channel:
+            self._unique_id = self._unique_id + channel
 
     @property
     def is_on(self):
@@ -117,7 +144,7 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
 
     def __init__(self, dev_id, dev_name, channel, sender_id):
         """Initialize the EnOcean switch device."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(dev_id, dev_name, __name__)
         self._light = None
         self._on_state = False
         self._on_state2 = False
@@ -126,6 +153,9 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
 
         if self._sender_id is None:
             self._sender_id = dev_id
+
+        if channel:
+            self._unique_id = self._unique_id + "_" + str(channel)
 
     @property
     def is_on(self):
@@ -240,3 +270,30 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
         if channel == self.channel:
             self._on_state = state
             self.schedule_update_ha_state()
+
+
+# dm
+def setup_platform_dm(hass, config, add_entities, entity):
+    """Set platform entry."""
+    entity._area_name = config.get("area_name")
+    entity._manufacturer = config.get("manufacturer")
+    entity._model = config.get("model")
+    entities.append(entity)
+
+
+# dm
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the EnOcean config entry."""
+
+    area_registry = await ar.async_get_registry(hass)
+
+    areas = area_registry.async_list_areas()
+
+    for entity in entities:
+        for area in areas:
+            if entity._area_name:
+                if entity.area_name.lower() == area.name.lower():
+                    entity._area_id = area.id
+                    entity._area_name = entity.area_name
+
+    async_add_entities(entities, True)

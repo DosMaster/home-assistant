@@ -1,0 +1,17 @@
+{
+    "config": {
+        "title": "Enocean",
+        "step": {
+            "user": {
+                "title": "Location",
+                "description": "Set up EnOcean",
+                "data": {
+                    "device": "Device"
+                }
+            }
+        },
+        "error": {
+            "device_exists": "Device already exists"
+        }
+    }
+}

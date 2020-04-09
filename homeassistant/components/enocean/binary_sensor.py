@@ -3,20 +3,33 @@ import logging
 
 import voluptuous as vol
 
+# from homeassistant.core import callback
+# dm
+# dm
+# from homeassistant import config_entries
 from homeassistant.components import enocean
-from homeassistant.components.binary_sensor import (
+from homeassistant.components.enocean import PLATFORM_SCHEMA
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
+import homeassistant.helpers.area_registry as ar
+import homeassistant.helpers.config_validation as cv
+
+from . import DOMAIN
+
+# import homeassistant.helpers.device_registry as dr
+
+
+from homeassistant.components.binary_sensor import (  # dm; PLATFORM_SCHEMA,
     DEVICE_CLASSES_SCHEMA,
-    PLATFORM_SCHEMA,
     BinarySensorDevice,
 )
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
-import homeassistant.helpers.config_validation as cv
+
 
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "EnOcean binary sensor"
 DEPENDENCIES = ["enocean"]
 EVENT_BUTTON_PRESSED = "button_pressed"
+
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -27,13 +40,26 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 
+entities = {}
+
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Binary Sensor platform for EnOcean."""
+
+    """Ignore if no config entry exist"""
+    if not hass.config_entries.async_entries(DOMAIN):
+        return
+
     dev_id = config.get(CONF_ID)
     dev_name = config.get(CONF_NAME)
     device_class = config.get(CONF_DEVICE_CLASS)
 
-    add_entities([EnOceanBinarySensor(dev_id, dev_name, device_class)])
+    # dm
+    # add_entities([EnOceanBinarySensor(dev_id, dev_name, device_class)])
+
+    # dm
+    entity = EnOceanBinarySensor(dev_id, dev_name, device_class)
+    setup_platform_dm(hass, config, add_entities, entity)
 
 
 class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
@@ -46,7 +72,7 @@ class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
 
     def __init__(self, dev_id, dev_name, device_class):
         """Initialize the EnOcean binary sensor."""
-        super().__init__(dev_id, dev_name)
+        super().__init__(dev_id, dev_name, __name__)
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
@@ -115,3 +141,31 @@ class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
                 "onoff": self.onoff,
             },
         )
+
+
+# dm
+def setup_platform_dm(hass, config, add_entities, entity):
+    """Set up platform entry."""
+    entity._area_name = config.get("area_name")
+    entity._manufacturer = config.get("manufacturer")
+    entity._model = config.get("model")
+    entities[entity.dev_name] = entity
+
+
+# dm
+async def async_setup_entry(hass, config_entry, async_add_entities):
+    """Set up the EnOcean config entry."""
+
+    area_registry = await ar.async_get_registry(hass)
+
+    areas = area_registry.async_list_areas()
+
+    for key, entity in entities.items():
+        for area in areas:
+            if entity._area_name:
+                if entity.area_name.lower() == area.name.lower():
+                    entity._area_id = area.id
+                    entity._area_name = entity.area_name
+        _LOGGER.debug("Adding entity: %s", entity.dev_name)
+
+    async_add_entities(entities.values(), True)

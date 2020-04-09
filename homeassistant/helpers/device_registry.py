@@ -106,6 +106,8 @@ class DeviceRegistry:
         name=_UNDEF,
         sw_version=_UNDEF,
         via_device=None,
+        # dm
+        area_id=_UNDEF,
     ):
         """Get device. Create if it doesn't exist."""
         if not identifiers and not connections:
@@ -144,6 +146,8 @@ class DeviceRegistry:
             model=model,
             name=name,
             sw_version=sw_version,
+            # dm
+            area_id=area_id,
         )
 
     @callback
