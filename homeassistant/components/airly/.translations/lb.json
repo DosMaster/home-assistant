@@ -1,8 +1,10 @@
 {
     "config": {
+        "abort": {
+            "already_configured": "Airly Integratioun fir d\u00ebs Koordinaten ass scho konfigur\u00e9iert."
+        },
         "error": {
             "auth": "Api Schl\u00ebssel ass net korrekt.",
-            "name_exists": "Numm g\u00ebtt et schonn",
             "wrong_location": "Keng Airly Moos Statioun an d\u00ebsem Ber\u00e4ich"
         },
         "step": {

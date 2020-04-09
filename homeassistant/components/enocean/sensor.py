@@ -23,6 +23,7 @@ from homeassistant.const import (
     STATE_CLOSED,
     STATE_OPEN,
     TEMP_CELSIUS,
+    UNIT_PERCENTAGE,
 )
 import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
@@ -51,7 +52,7 @@ EVENT_PIR_CHANGED = "pir_changed"
 SENSOR_TYPES = {
     SENSOR_TYPE_HUMIDITY: {
         "name": "Humidity",
-        "unit": "%",
+        "unit": UNIT_PERCENTAGE,
         "icon": "mdi:water-percent",
         "class": DEVICE_CLASS_HUMIDITY,
     },
@@ -167,9 +168,7 @@ class EnOceanSensor(enocean.EnOceanDevice):
         super().__init__(dev_id, dev_name, __name__)
         self._sensor_type = sensor_type
         self._device_class = SENSOR_TYPES[self._sensor_type]["class"]
-        self._dev_name = "{} {}".format(
-            SENSOR_TYPES[self._sensor_type]["name"], dev_name
-        )
+        self._dev_name = f"{SENSOR_TYPES[self._sensor_type]['name']} {dev_name}"
         self._unit_of_measurement = SENSOR_TYPES[self._sensor_type]["unit"]
         self._icon = SENSOR_TYPES[self._sensor_type]["icon"]
         self._state = None
