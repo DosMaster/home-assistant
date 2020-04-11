@@ -13,7 +13,6 @@ import voluptuous as vol
 # from homeassistant.helpers.area_registry import async_get_registry
 # from homeassistant import config_entries
 # from homeassistant.components.config import area_registry
-from homeassistant.components import enocean
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_DEVICE
 from homeassistant.core import callback
@@ -178,8 +177,8 @@ class EnOceanDevice(Entity):
         packet = Packet(packet_type, data=data, optional=optional)
         _LOGGER.debug(
             "Sending radio packet: %s->%s %s",
-            enocean.utils.to_hex_string(sender),
-            enocean.utils.to_hex_string(receiver),
+            eu.to_hex_string(sender),
+            eu.to_hex_string(receiver),
             packet,
         )
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
