@@ -3,29 +3,21 @@ import logging
 
 import voluptuous as vol
 
-# from homeassistant.core import callback
 # dm
-# dm
-# dm
-# from homeassistant.components.switch import PLATFORM_SCHEMA
-# from homeassistant import config_entries
-# import homeassistant.helpers.device_registry as dr
+# from homeassistant.components.switch import PLATFORM_SCHEMA #dm
 from homeassistant.components import enocean
 from homeassistant.components.enocean import PLATFORM_SCHEMA
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME  # dm
 import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ToggleEntity
 
-# from . import DATA_ENOCEAN_CONFIG_ID, DOMAIN
-
 _LOGGER = logging.getLogger(__name__)
 
 CONF_CHANNEL = "channel"
-CONF_SENDER_ID = "sender_id"
-
 DEFAULT_NAME = "EnOcean Switch"
 
+CONF_SENDER_ID = "sender_id"
 DEVICE_CLASS_SWITCH = "switch"
 DEVICE_CLASS_SWITCH_ELTAKO = "switch_eltako"
 
@@ -35,11 +27,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_CHANNEL, default=0): cv.positive_int,
-        vol.Optional(CONF_DEVICE_CLASS, default=DEVICE_CLASS_SWITCH): cv.string,
-        vol.Optional(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
+        vol.Optional(CONF_DEVICE_CLASS, default=DEVICE_CLASS_SWITCH): cv.string,  # dm
+        vol.Optional(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),  # dm
     }
 )
-
 
 entities = []
 
@@ -49,14 +40,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     channel = config.get(CONF_CHANNEL)
     dev_id = config.get(CONF_ID)
     dev_name = config.get(CONF_NAME)
-    dev_class = config.get(CONF_DEVICE_CLASS)
+    dev_class = config.get(CONF_DEVICE_CLASS)  # dm
 
-    # dm
-    # if dev_class == DEVICE_CLASS_SWITCH:
-    #     add_entities([EnOceanSwitch(dev_id, dev_name, channel)])
-    # elif dev_class == DEVICE_CLASS_SWITCH_ELTAKO:
-    #     sender_id = config.get(CONF_SENDER_ID)
-    #     add_entities([EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)])
+    # add_entities([EnOceanSwitch(dev_id, dev_name, channel)]) #dm
 
     # dm
     if dev_class == DEVICE_CLASS_SWITCH:
@@ -64,7 +50,6 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     elif dev_class == DEVICE_CLASS_SWITCH_ELTAKO:
         sender_id = config.get(CONF_SENDER_ID)
         entity = EnOceanSwitchEltako(dev_id, dev_name, channel, sender_id)
-    # dm
     setup_platform_dm(hass, config, add_entities, entity)
 
 
@@ -79,6 +64,7 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
         self._on_state2 = False
         self.channel = channel
 
+        # dm
         if self.channel:
             self._unique_id = self._unique_id + channel
 
@@ -139,6 +125,7 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
                     self.schedule_update_ha_state()
 
 
+# dm
 class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
     """Representation of an EnOcean switch device."""
 

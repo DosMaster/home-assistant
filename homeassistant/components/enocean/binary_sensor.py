@@ -3,11 +3,11 @@ import logging
 
 import voluptuous as vol
 
-# from homeassistant.core import callback
-# dm
-# dm
-# from homeassistant import config_entries
 from homeassistant.components import enocean
+from homeassistant.components.binary_sensor import (  # PLATFORM_SCHEMA,
+    DEVICE_CLASSES_SCHEMA,
+    BinarySensorDevice,
+)
 from homeassistant.components.enocean import PLATFORM_SCHEMA
 from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
 import homeassistant.helpers.area_registry as ar
@@ -15,21 +15,11 @@ import homeassistant.helpers.config_validation as cv
 
 from . import DOMAIN
 
-# import homeassistant.helpers.device_registry as dr
-
-
-from homeassistant.components.binary_sensor import (  # dm; PLATFORM_SCHEMA,
-    DEVICE_CLASSES_SCHEMA,
-    BinarySensorDevice,
-)
-
-
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "EnOcean binary sensor"
 DEPENDENCIES = ["enocean"]
 EVENT_BUTTON_PRESSED = "button_pressed"
-
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
@@ -38,7 +28,6 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
     }
 )
-
 
 entities = {}
 
@@ -54,8 +43,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     dev_name = config.get(CONF_NAME)
     device_class = config.get(CONF_DEVICE_CLASS)
 
-    # dm
-    # add_entities([EnOceanBinarySensor(dev_id, dev_name, device_class)])
+    """
+    add_entities([EnOceanBinarySensor(dev_id, dev_name, device_class)])
+    """
 
     # dm
     entity = EnOceanBinarySensor(dev_id, dev_name, device_class)
@@ -72,7 +62,7 @@ class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
 
     def __init__(self, dev_id, dev_name, device_class):
         """Initialize the EnOcean binary sensor."""
-        super().__init__(dev_id, dev_name, __name__)
+        super().__init__(dev_id, dev_name, __name__)  # dm
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
@@ -131,7 +121,6 @@ class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
         elif action == 0x00:
             self.which = -1
             self.onoff = -1
-
         self.hass.bus.fire(
             EVENT_BUTTON_PRESSED,
             {

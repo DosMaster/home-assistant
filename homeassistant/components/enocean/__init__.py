@@ -17,28 +17,17 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import slugify
 
-# from .config_flow import EnOceanFlowHandler
-from .const import DOMAIN
-
-# from homeassistant.helpers.area_registry import async_get_registry
-# from homeassistant import config_entries
-# from homeassistant.components.config import area_registry
-
-
 _LOGGER = logging.getLogger(__name__)
 
-
-# DOMAIN = "enocean"
+DOMAIN = "enocean"
 DATA_ENOCEAN = "enocean"
 
 CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.Schema({vol.Required(CONF_DEVICE): cv.string})}, extra=vol.ALLOW_EXTRA
 )
 
-
 SIGNAL_RECEIVE_MESSAGE = "enocean.receive_message"
 SIGNAL_SEND_MESSAGE = "enocean.send_message"
-
 
 DATA_ENOCEAN_CONFIG = "enocean_config"
 DATA_ENOCEAN_HASS_CONFIG = "enocean_hass_config"
@@ -57,8 +46,6 @@ ENOCEAN_COMPONENTS = [
     "sensor",
     "switch",
 ]
-
-# areas = []
 
 
 def setup(hass, config):
@@ -88,15 +75,16 @@ class EnOceanDongle:
             SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
         """
-        self._hass = hass
-        self._ser = ser
+        self.hass = hass
+        self.ser = ser
+        self._dispatcher_disconnect = None
 
     async def async_initialize(self):
         """Initialize serial communication."""
 
-        self.__communicator = SerialCommunicator(port=self._ser, callback=self.callback)
+        self.__communicator = SerialCommunicator(port=self.ser, callback=self.callback)
         self.__communicator.start()
-        self._dispatcher_disconnect = self._hass.helpers.dispatcher.async_dispatcher_connect(
+        self._dispatcher_disconnect = self.hass.helpers.dispatcher.async_dispatcher_connect(
             SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
 
@@ -113,9 +101,7 @@ class EnOceanDongle:
 
         if isinstance(packet, RadioPacket):
             _LOGGER.debug("Received radio packet: %s", packet)
-            self._hass.helpers.dispatcher.dispatcher_send(
-                SIGNAL_RECEIVE_MESSAGE, packet
-            )
+            self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_RECEIVE_MESSAGE, packet)
 
     # dm
     async def async_reconnect(self):
@@ -146,7 +132,7 @@ class EnOceanDevice(Entity):
         self._manufacturer = None
         self._model = None
         self._unique_id = eu.to_hex_string(dev_id)
-        self._remove_dispatcher = None
+        self._dispatcher_disconnect = None
 
         lastdot = orgname.rfind(".")
         if lastdot >= 0:
@@ -163,7 +149,7 @@ class EnOceanDevice(Entity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
-        self._remove_dispatcher = self.hass.helpers.dispatcher.async_dispatcher_connect(
+        self._dispatcher_disconnect = self.hass.helpers.dispatcher.async_dispatcher_connect(
             SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
         )
 
@@ -258,8 +244,8 @@ class EnOceanDevice(Entity):
 
         # self.platform.entities.pop(self)
 
-        if self._remove_dispatcher is not None:
-            self._remove_dispatcher()
+        if self._dispatcher_disconnect is not None:
+            self._dispatcher_disconnect()
 
         pass
 

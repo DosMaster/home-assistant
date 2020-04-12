@@ -3,47 +3,41 @@ import logging
 
 import voluptuous as vol
 
-# from homeassistant.core import callback
 # dm
-# dm
-# from homeassistant import config_entries
 from homeassistant.components import enocean
-from homeassistant.components.enocean import PLATFORM_SCHEMA
-from homeassistant.const import CONF_ID, CONF_NAME
-import homeassistant.helpers.area_registry as ar
-import homeassistant.helpers.config_validation as cv
-
-# import homeassistant.helpers.device_registry as dr
-
-# from . import DATA_ENOCEAN_CONFIG_ID, DOMAIN
-
-from homeassistant.components.light import (  # dm; PLATFORM_SCHEMA,
+from homeassistant.components.enocean import PLATFORM_SCHEMA  # dm
+from homeassistant.components.light import (  # PLATFORM_SCHEMA,
     ATTR_BRIGHTNESS,
     SUPPORT_BRIGHTNESS,
     Light,
 )
+from homeassistant.const import CONF_ID, CONF_NAME
+import homeassistant.helpers.area_registry as ar
+import homeassistant.helpers.config_validation as cv
+
+# import math #dm
 
 
 _LOGGER = logging.getLogger(__name__)
 
 CONF_SENDER_ID = "sender_id"
 
-DEFAULT_NAME = "EnOcean Light"
-SUPPORT_ENOCEAN = SUPPORT_BRIGHTNESS
+
 CONF_DEVICE_TYPE = "device_type"
 
+DEFAULT_NAME = "EnOcean Light"
+SUPPORT_ENOCEAN = SUPPORT_BRIGHTNESS
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Optional(CONF_ID, default=[]): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Required(CONF_SENDER_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_DEVICE_TYPE, default="std"): cv.string,
+        vol.Optional(CONF_DEVICE_TYPE, default="std"): cv.string,  # dm
     }
 )
 
-
-entities = []
+entities = []  # dm
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -51,9 +45,11 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     sender_id = config.get(CONF_SENDER_ID)
     dev_name = config.get(CONF_NAME)
     dev_id = config.get(CONF_ID)
-    dev_type = config.get(CONF_DEVICE_TYPE)
+    dev_type = config.get(CONF_DEVICE_TYPE)  # dm
 
-    # add_entities([EnOceanLight(sender_id, dev_id, dev_name, dev_type)])
+    """
+    add_entities([EnOceanLight(sender_id, dev_id, dev_name)])
+    """
 
     # dm
     entity = EnOceanLight(sender_id, dev_id, dev_name, dev_type)
@@ -63,14 +59,15 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class EnOceanLight(enocean.EnOceanDevice, Light):
     """Representation of an EnOcean light source."""
 
-    def __init__(self, sender_id, dev_id, dev_name, dev_type):
+    def __init__(self, sender_id, dev_id, dev_name, dev_type):  # dm
         """Initialize the EnOcean light source."""
-        super().__init__(dev_id, dev_name, __name__)
+        super().__init__(dev_id, dev_name, __name__)  # dm
         self._on_state = False
         self._brightness = 50
         self._sender_id = sender_id
         self._dev_type = dev_type
 
+        # dm
         if dev_type.lower() == "std" or dev_type.lower() == "fud14":
             self.dev_type = dev_type.lower()
         else:
@@ -107,7 +104,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         if brightness is not None:
             self._brightness = brightness
 
-        bval = round(self._brightness / 256.0 * 100.0)
+        bval = round(self._brightness / 256.0 * 100.0)  # dm
         if bval == 0:
             bval = 1
         command = [0xA5, 0x02, bval, 0x01, 0x09]
@@ -118,9 +115,9 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
 
     def turn_off(self, **kwargs):
         """Turn the light source off."""
-        if self.dev_type == "fud14":
-            command = [0xA5, 0x02, 0x00, 0x01, 0x08]
-        else:
+        if self.dev_type == "fud14":  # dm
+            command = [0xA5, 0x02, 0x00, 0x01, 0x08]  # dm
+        else:  # dm
             command = [0xA5, 0x02, 0x00, 0x01, 0x09]
         command.extend(self._sender_id)
         command.extend([0x00])
@@ -135,16 +132,15 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
         """
         if packet.data[0] == 0xA5 and packet.data[1] == 0x02:
             val = packet.data[2]
-            if self.dev_type == "fud14":
-                if (packet.data[4] & 0x01) == 1:
-                    self._brightness = round(val / 100.0 * 256.0)
-                    self._on_state = True
-                else:
-                    self._on_state = False
-            else:
+            if self.dev_type == "fud14":  # dm
+                if (packet.data[4] & 0x01) == 1:  # dm
+                    self._brightness = round(val / 100.0 * 256.0)  # dm
+                    self._on_state = True  # dm
+                else:  # dm
+                    self._on_state = False  # dm
+            else:  # dm
                 self._brightness = round(val / 100.0 * 256.0)
                 self._on_state = bool(val != 0)
-
             self.schedule_update_ha_state()
 
 
