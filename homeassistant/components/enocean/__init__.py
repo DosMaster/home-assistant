@@ -376,7 +376,7 @@ async def async_setup_entry(hass, config_entry):
     # )
 
     # serial_dev = config[DOMAIN].get(CONF_DEVICE)
-    serial_dev = "COM6"
+    serial_dev = config_entry.data.get(CONF_DEVICE)
     dongle = EnOceanDongle(hass, serial_dev)
     await dongle.async_initialize()
     hass.data[DATA_ENOCEAN] = dongle
