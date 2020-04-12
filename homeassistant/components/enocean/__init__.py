@@ -1,6 +1,4 @@
 """Support for EnOcean devices."""
-# DM
-# import asyncio
 import logging
 from typing import Optional  # Any, Callable, Dict, List, Union
 
@@ -10,9 +8,7 @@ import enocean.utils as eu
 from enocean.utils import combine_hex
 import voluptuous as vol
 
-# from homeassistant.helpers.area_registry import async_get_registry
-# from homeassistant import config_entries
-# from homeassistant.components.config import area_registry
+from homeassistant import const as ha_const
 from homeassistant.components.binary_sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_DEVICE
 from homeassistant.core import callback
@@ -23,6 +19,11 @@ from homeassistant.util import slugify
 
 # from .config_flow import EnOceanFlowHandler
 from .const import DOMAIN
+
+# from homeassistant.helpers.area_registry import async_get_registry
+# from homeassistant import config_entries
+# from homeassistant.components.config import area_registry
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -62,11 +63,11 @@ ENOCEAN_COMPONENTS = [
 
 def setup(hass, config):
     """Set up the EnOcean component."""
-
-    # serial_dev = config[DOMAIN].get(CONF_DEVICE)
-    # dongle = EnOceanDongle(hass, serial_dev)
-    # hass.data[DATA_ENOCEAN] = dongle
-
+    """
+    serial_dev = config[DOMAIN].get(CONF_DEVICE)
+    dongle = EnOceanDongle(hass, serial_dev)
+    hass.data[DATA_ENOCEAN] = dongle
+    """
     # dm
     _setup_dm(hass, config)
 
@@ -79,14 +80,25 @@ class EnOceanDongle:
     def __init__(self, hass, ser):
         """Initialize the EnOcean dongle."""
 
+        """
         self.__communicator = SerialCommunicator(port=ser, callback=self.callback)
         self.__communicator.start()
         self.hass = hass
-        self._dispatcher_disconnect = self.hass.helpers.dispatcher.dispatcher_connect(
+        self.hass.helpers.dispatcher.dispatcher_connect(
             SIGNAL_SEND_MESSAGE, self._send_message_callback
         )
-        _LOGGER.info("Serial port opened and dispatcher connected.")
-        pass
+        """
+        self._hass = hass
+        self._ser = ser
+
+    async def async_initialize(self):
+        """Initialize serial communication."""
+
+        self.__communicator = SerialCommunicator(port=self._ser, callback=self.callback)
+        self.__communicator.start()
+        self._dispatcher_disconnect = self._hass.helpers.dispatcher.async_dispatcher_connect(
+            SIGNAL_SEND_MESSAGE, self._send_message_callback
+        )
 
     def _send_message_callback(self, command):
         """Send a command through the EnOcean dongle."""
@@ -101,16 +113,18 @@ class EnOceanDongle:
 
         if isinstance(packet, RadioPacket):
             _LOGGER.debug("Received radio packet: %s", packet)
-            self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_RECEIVE_MESSAGE, packet)
+            self._hass.helpers.dispatcher.dispatcher_send(
+                SIGNAL_RECEIVE_MESSAGE, packet
+            )
 
     # dm
-    def reconnect(self):
+    async def async_reconnect(self):
         """reconnect."""
         pass
 
-    def disconnect(self):
+    async def async_disconnect(self):
         """disconnect."""
-        # self._dispatcher_disconnect()
+        self._dispatcher_disconnect()
         self.__communicator.stop()
         _LOGGER.info("Serial port closed.")
         pass
@@ -326,6 +340,12 @@ async def async_setup(hass, config):
     #         )
     #     )
 
+    # serial_dev = config[DOMAIN].get(CONF_DEVICE)
+    # dongle = EnOceanDongle(hass, serial_dev)
+    # hass.data[DATA_ENOCEAN] = dongle
+
+    # result = await hass.async_add_executor_job(_setup_dm(hass, config))
+
     return True
 
 
@@ -355,12 +375,29 @@ async def async_setup_entry(hass, config_entry):
     #     hass.config_entries.async_forward_entry_setup(config_entry, "switch")
     # )
 
+    # serial_dev = config[DOMAIN].get(CONF_DEVICE)
+    serial_dev = "COM6"
+    dongle = EnOceanDongle(hass, serial_dev)
+    await dongle.async_initialize()
+    hass.data[DATA_ENOCEAN] = dongle
+
     # Set up platforms
     for component in ENOCEAN_COMPONENTS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, component)
         )
         _LOGGER.debug("Component %s setup started.", component)
+
+    async def async_enocean_shutdown(event):
+        """Handle shutdown tasks."""
+        dongle = hass.data.get(DATA_ENOCEAN)
+        if isinstance(dongle, EnOceanDongle):
+            await dongle.async_disconnect()
+            hass.data.pop(DATA_ENOCEAN)
+
+    hass.bus.async_listen_once(
+        ha_const.EVENT_HOMEASSISTANT_STOP, async_enocean_shutdown
+    )
 
     return True
 
@@ -371,12 +408,12 @@ async def async_unload_entry(hass, config_entry):
     # hass.data.pop(DATA_ENOCEAN_HASS_CONFIG)
     # hass.data.pop(DATA_ENOCEAN_CONFIG)
 
-    dongle = hass.data.get(DATA_ENOCEAN)
-    if isinstance(dongle, EnOceanDongle):
-        dongle.disconnect()
-        hass.data.pop(DATA_ENOCEAN)
-        # hass.data.pop(DATA_ENOCEAN_HASS_CONFIG)
-        # hass.data.pop(DATA_ENOCEAN_CONFIG)
+    # dongle = hass.data.get(DATA_ENOCEAN)
+    # if isinstance(dongle, EnOceanDongle):
+    #     await dongle.disconnect()
+    #     hass.data.pop(DATA_ENOCEAN)
+    #     # hass.data.pop(DATA_ENOCEAN_HASS_CONFIG)
+    #     # hass.data.pop(DATA_ENOCEAN_CONFIG)
 
     # await hass.config_entries.async_forward_entry_unload(config_entry, "binary_sensor")
     # await hass.config_entries.async_forward_entry_unload(config_entry, "light")
@@ -384,10 +421,15 @@ async def async_unload_entry(hass, config_entry):
     # await hass.config_entries.async_forward_entry_unload(config_entry, "switch")
 
     # Unload up platforms
-    for component in ENOCEAN_COMPONENTS:
-        await hass.config_entries.async_forward_entry_unload(config_entry, component)
-        _LOGGER.debug("Component %s unloaded.", component)
+    # for component in ENOCEAN_COMPONENTS:
+    #     await hass.config_entries.async_forward_entry_unload(config_entry, component)
+    #     _LOGGER.debug("Component %s unloaded.", component)
 
+    return True
+
+
+async def async_remove_entry(hass, entry) -> None:
+    """Handle removal of an entry."""
     return True
 
 
