@@ -133,6 +133,7 @@ class EnOceanDevice(Entity):
         self._model = None
         self._unique_id = eu.to_hex_string(dev_id)
         self._dispatcher_disconnect = None
+        self.added_to_hass = False
 
         lastdot = orgname.rfind(".")
         if lastdot >= 0:
@@ -149,6 +150,7 @@ class EnOceanDevice(Entity):
 
     async def async_added_to_hass(self):
         """Register callbacks."""
+        self.added_to_hass = True
         self._dispatcher_disconnect = self.hass.helpers.dispatcher.async_dispatcher_connect(
             SIGNAL_RECEIVE_MESSAGE, self._message_received_callback
         )
@@ -182,6 +184,9 @@ class EnOceanDevice(Entity):
             packet,
         )
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
+
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
 
     # dm
     @property

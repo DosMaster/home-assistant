@@ -11,9 +11,10 @@ from homeassistant.components.light import (  # PLATFORM_SCHEMA,
     SUPPORT_BRIGHTNESS,
     Light,
 )
-from homeassistant.const import CONF_ID, CONF_NAME
+from homeassistant.const import CONF_ID, CONF_NAME, STATE_ON  # dm
 import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.restore_state import RestoreEntity
 
 # import math #dm
 
@@ -56,7 +57,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     setup_platform_dm(hass, config, add_entities, entity)
 
 
-class EnOceanLight(enocean.EnOceanDevice, Light):
+class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
     """Representation of an EnOcean light source."""
 
     def __init__(self, sender_id, dev_id, dev_name, dev_type):  # dm
@@ -141,7 +142,34 @@ class EnOceanLight(enocean.EnOceanDevice, Light):
             else:  # dm
                 self._brightness = round(val / 100.0 * 256.0)
                 self._on_state = bool(val != 0)
-            self.schedule_update_ha_state()
+
+            if self.added_to_hass:
+                self.schedule_update_ha_state()
+
+    # dm
+    async def async_added_to_hass(self):
+        """Restore device state (ON/OFF/Brightness)."""
+        await super().async_added_to_hass()
+
+        old_state = await self.async_get_last_state()
+
+        if old_state is not None:
+            self._on_state = old_state.state == STATE_ON
+
+        # Restore the brightness of dimmable devices
+        if (
+            old_state is not None
+            and old_state.attributes.get(ATTR_BRIGHTNESS) is not None
+        ):
+            self._brightness = int(old_state.attributes[ATTR_BRIGHTNESS])
+
+    @property
+    def device_state_attributes(self):
+        """Return the device state attributes."""
+        attr = {}
+        if self._brightness is not None:
+            attr[ATTR_BRIGHTNESS] = self._brightness
+        return attr
 
 
 # dm
