@@ -68,8 +68,17 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
         self._sender_id = sender_id
         self._dev_type = dev_type
 
+        if dev_type.lower() == "fsr14":
+            self._enocean_support = 0
+        else:
+            self._enocean_support = SUPPORT_BRIGHTNESS
+
         # dm
-        if dev_type.lower() == "std" or dev_type.lower() == "fud14":
+        if (
+            dev_type.lower() == "std"
+            or dev_type.lower() == "fud14"
+            or dev_type.lower() == "fsr14"
+        ):
             self.dev_type = dev_type.lower()
         else:
             self.dev_type = None
@@ -97,7 +106,7 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
     @property
     def supported_features(self):
         """Flag supported features."""
-        return SUPPORT_ENOCEAN
+        return self._enocean_support
 
     def turn_on(self, **kwargs):
         """Turn the light source on or sets a specific dimmer value."""
@@ -108,7 +117,10 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
         bval = round(self._brightness / 256.0 * 100.0)  # dm
         if bval == 0:
             bval = 1
-        command = [0xA5, 0x02, bval, 0x01, 0x09]
+        if self.dev_type == "fsr14":  # dm
+            command = [0xA5, 0x01, 0x00, 0x00, 0x09]
+        else:  # dm
+            command = [0xA5, 0x02, bval, 0x01, 0x09]
         command.extend(self._sender_id)
         command.extend([0x00])
         self.send_command(command, [], 0x01)
@@ -118,6 +130,8 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
         """Turn the light source off."""
         if self.dev_type == "fud14":  # dm
             command = [0xA5, 0x02, 0x00, 0x01, 0x08]  # dm
+        if self.dev_type == "fsr14":  # dm
+            command = [0xA5, 0x01, 0x00, 0x00, 0x08]  # dm
         else:  # dm
             command = [0xA5, 0x02, 0x00, 0x01, 0x09]
         command.extend(self._sender_id)
