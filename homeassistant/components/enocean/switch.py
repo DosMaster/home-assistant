@@ -7,10 +7,11 @@ import voluptuous as vol
 # from homeassistant.components.switch import PLATFORM_SCHEMA #dm
 from homeassistant.components import enocean
 from homeassistant.components.enocean import PLATFORM_SCHEMA
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME  # dm
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, STATE_ON  # dm
 import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import ToggleEntity
+from homeassistant.helpers.restore_state import RestoreEntity  # dm
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     setup_platform_dm(hass, config, add_entities, entity)
 
 
-class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
+class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity, RestoreEntity):
     """Representation of an EnOcean switch device."""
 
     def __init__(self, dev_id, dev_name, channel):
@@ -90,6 +91,10 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
         )
         self._on_state = True
 
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
+
     def turn_off(self, **kwargs):
         """Turn off the switch."""
         optional = [0x03]
@@ -101,6 +106,10 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
             packet_type=0x01,
         )
         self._on_state = False
+
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
 
     def value_changed(self, packet):
         """Update the internal state of the switch."""
@@ -122,11 +131,28 @@ class EnOceanSwitch(enocean.EnOceanDevice, ToggleEntity):
                 output = packet.parsed["OV"]["raw_value"]
                 if channel == self.channel:
                     self._on_state = output > 0
-                    self.schedule_update_ha_state()
+                    if self.added_to_hass:  # dm
+                        self.schedule_update_ha_state()
+
+    # dm
+    async def async_added_to_hass(self):
+        """Restore device state (ON/OFF/Brightness)."""
+        await super().async_added_to_hass()
+
+        old_state = await self.async_get_last_state()
+
+        if old_state is not None:
+            self._on_state = old_state.state == STATE_ON
+
+    @property
+    def device_state_attributes(self):
+        """Return the device state attributes."""
+        attr = {}
+        return attr
 
 
 # dm
-class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
+class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity, RestoreEntity):
     """Representation of an EnOcean switch device."""
 
     def __init__(self, dev_id, dev_name, channel, sender_id):
@@ -178,6 +204,10 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
         else:
             _LOGGER.error("Unsupported channel: %s (%s)", self.channel, self.dev_name)
 
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
+
     def turn_off(self, **kwargs):
         """Turn off the switch."""
         if self.channel == 0:
@@ -201,6 +231,10 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
             self._on_state = False
         else:
             _LOGGER.error("Unsupported channel: %s (%s)", self.channel, self.dev_name)
+
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
 
     def value_changed(self, packet):
         """Update the internal state of the switch."""
@@ -233,30 +267,46 @@ class EnOceanSwitchEltako(enocean.EnOceanDevice, ToggleEntity):
                 + packet.parsed["SA"]["raw_value"]
             )
             if rocker_action == 0x70:
-                state = True
+                self._on_state = True
                 channel = 0
             elif rocker_action == 0x30:
-                state = True
+                self._on_state = True
                 channel = 1
             elif rocker_action == 0x37:
-                state = True
+                self._on_state = True
                 channel = 10
             elif rocker_action == 0x50:
-                state = False
+                self._on_state = False
                 channel = 0
             elif rocker_action == 0x10:
-                state = False
+                self._on_state = False
                 channel = 1
             elif rocker_action == 0x15:
-                state = False
+                self._on_state = False
                 channel = 10
             else:
-                state = False
+                self._on_state = False
                 channel = 99
 
         if channel == self.channel:
-            self._on_state = state
-            self.schedule_update_ha_state()
+            if self.added_to_hass:  # dm
+                self.schedule_update_ha_state()
+
+    # dm
+    async def async_added_to_hass(self):
+        """Restore device state (ON/OFF/Brightness)."""
+        await super().async_added_to_hass()
+
+        old_state = await self.async_get_last_state()
+
+        if old_state is not None:
+            self._on_state = old_state.state == STATE_ON
+
+    @property
+    def device_state_attributes(self):
+        """Return the device state attributes."""
+        attr = {}
+        return attr
 
 
 # dm
