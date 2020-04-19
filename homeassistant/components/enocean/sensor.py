@@ -1,5 +1,5 @@
 """Support for EnOcean sensors."""
-import logging
+import logging  # dm
 
 import voluptuous as vol
 
@@ -41,7 +41,8 @@ SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
 SENSOR_TYPE_ILLUMINANCE = "light"
 CONF_DEVICE_TYPE = "device_type"
 EVENT_PIR_CHANGED = "pir_changed"
-
+SENSOR_TYPE_TIMER = "timer"
+DEVICE_CLASS_TIMER = "timer"
 
 SENSOR_TYPES = {
     SENSOR_TYPE_HUMIDITY: {
@@ -73,6 +74,12 @@ SENSOR_TYPES = {
         "unit": "lx",  # dm
         "icon": "mdi:brightness-6",  # dm
         "class": DEVICE_CLASS_ILLUMINANCE,  # dm
+    },
+    SENSOR_TYPE_TIMER: {  # dm
+        "name": "Timer",  # dm
+        "unit": "",  # dm
+        "icon": "mdi:timer",  # dm
+        "class": DEVICE_CLASS_TIMER,  # dm
     },
 }
 
@@ -122,6 +129,11 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     elif sensor_type == SENSOR_TYPE_ILLUMINANCE:
         dev_type = config.get(CONF_DEVICE_TYPE)
         entity = EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)
+    # dm
+    elif sensor_type == SENSOR_TYPE_TIMER:
+        entity = EnOceanTimer(dev_id, dev_name)
+    else:
+        _LOGGER.error("Sensor type " "%s" " not found.", sensor_type)
 
     if entity:
         setup_platform_dm(hass, config, add_entities, entity)
@@ -346,6 +358,49 @@ class EnOceanIlluminanceSensor(EnOceanSensor):
             Illuminance += 300
         self._state = round(Illuminance, 0)
         self.schedule_update_ha_state()
+
+
+class EnOceanTimer(EnOceanSensor):
+    """Representation of an EnOcean timer device."""
+
+    def __init__(self, dev_id, dev_name):
+        """Initialize the EnOcean temperature sensor device."""
+        super().__init__(dev_id, dev_name, SENSOR_TYPE_TIMER)
+
+    def value_changed(self, packet):
+        """Update the internal state of the sensor."""
+        if packet.data[0] != 0xA5 or (packet.data[4] & 0x40) != 0x40:
+            return
+
+        weekdays = [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday",
+        ]
+        weekday = (packet.data[1] & 0xE0) >> 5
+        hour = packet.data[1] & 0x1F
+        minute = packet.data[2] & 0x2F
+        # ampm = "am" if (packet.data[4] & 0x2) == 0 else "pm"
+        # format24 = "24" if (packet.data[4] & 0x04) == 0 else "12"
+        self._state = (
+            "{:02d}".format(hour)
+            + ":"
+            + "{:02d}".format(minute)
+            + " ("
+            + weekdays[weekday - 1]
+            + ")"
+        )
+
+        self.schedule_update_ha_state()
+
+    @property
+    def state(self):
+        """Return the state of the sensor."""
+        return self._state
 
 
 # dm
