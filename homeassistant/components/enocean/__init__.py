@@ -185,9 +185,6 @@ class EnOceanDevice(Entity):
         )
         self.hass.helpers.dispatcher.dispatcher_send(SIGNAL_SEND_MESSAGE, packet)
 
-        if self.added_to_hass:
-            self.schedule_update_ha_state()
-
     # dm
     @property
     def device_info(self):

@@ -126,6 +126,10 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
         self.send_command(command, [], 0x01)
         self._on_state = True
 
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
+
     def turn_off(self, **kwargs):
         """Turn the light source off."""
         if self.dev_type == "fud14":  # dm
@@ -138,6 +142,10 @@ class EnOceanLight(enocean.EnOceanDevice, Light, RestoreEntity):
         command.extend([0x00])
         self.send_command(command, [], 0x01)
         self._on_state = False
+
+        # dm
+        if self.added_to_hass:
+            self.schedule_update_ha_state()
 
     def value_changed(self, packet):
         """Update the internal state of this device.
