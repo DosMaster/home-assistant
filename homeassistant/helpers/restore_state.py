@@ -184,7 +184,20 @@ class RestoreStateData:
         _async_dump_states()
 
         # Dump states periodically
-        async_track_time_interval(self.hass, _async_dump_states, STATE_DUMP_INTERVAL)
+
+        if self.hass.config.state_dump_interval > 0:
+            _LOGGER.info(
+                "state_dump_interval: %s", self.hass.config.state_dump_interval
+            )
+            async_track_time_interval(
+                self.hass,
+                _async_dump_states,
+                timedelta(seconds=self.hass.config.state_dump_interval),
+            )
+        else:
+            async_track_time_interval(
+                self.hass, _async_dump_states, STATE_DUMP_INTERVAL
+            )
 
         # Dump states when stopping hass
         self.hass.bus.async_listen_once(

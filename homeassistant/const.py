@@ -176,6 +176,9 @@ CONF_WHITELIST_EXTERNAL_DIRS = "whitelist_external_dirs"
 CONF_XY = "xy"
 CONF_ZONE = "zone"
 
+# dm
+CONF_STATE_DUMP_INTERVAL = "state_dump_interval"
+
 # #### EVENTS ####
 EVENT_AUTOMATION_TRIGGERED = "automation_triggered"
 EVENT_CALL_SERVICE = "call_service"

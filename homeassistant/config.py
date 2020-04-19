@@ -41,6 +41,7 @@ from homeassistant.const import (
     TEMP_CELSIUS,
     __version__,
 )
+from homeassistant.const import CONF_STATE_DUMP_INTERVAL  # dm
 from homeassistant.core import DOMAIN as CONF_CORE, SOURCE_YAML, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_per_platform, extract_domain_configs
@@ -216,6 +217,7 @@ CORE_CONFIG_SCHEMA = CUSTOMIZE_CONFIG_SCHEMA.extend(
             ],
             _no_duplicate_auth_mfa_module,
         ),
+        CONF_STATE_DUMP_INTERVAL: vol.Coerce(int),  # dm
     }
 )
 
@@ -547,6 +549,10 @@ async def async_process_ha_core_config(hass: HomeAssistant, config: Dict) -> Non
             CONF_UNIT_SYSTEM,
             hac.units.name,
         )
+
+    # dm
+    if CONF_STATE_DUMP_INTERVAL in config:
+        hac.state_dump_interval = config[CONF_STATE_DUMP_INTERVAL]
 
 
 def _log_pkg_error(package: str, component: str, config: Dict, message: str) -> None:

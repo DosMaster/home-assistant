@@ -1273,6 +1273,8 @@ class Config:
         self.time_zone: datetime.tzinfo = dt_util.UTC
         self.units: UnitSystem = METRIC_SYSTEM
 
+        # dm
+        self.state_dump_interval = 0
         self.config_source: str = "default"
 
         # If True, pip install is skipped for requirements on startup
