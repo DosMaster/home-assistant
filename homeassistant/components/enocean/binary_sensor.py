@@ -4,64 +4,39 @@ import logging
 import voluptuous as vol
 
 from homeassistant.components import enocean
-from homeassistant.components.binary_sensor import (  # PLATFORM_SCHEMA,
+from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA,
+    PLATFORM_SCHEMA,
     BinarySensorDevice,
 )
-from homeassistant.components.enocean import PLATFORM_SCHEMA
-from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME, STATE_ON  # dm
-import homeassistant.helpers.area_registry as ar
+from homeassistant.const import CONF_DEVICE_CLASS, CONF_ID, CONF_NAME
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.restore_state import RestoreEntity  # dm
-
-from . import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
 DEFAULT_NAME = "EnOcean binary sensor"
 DEPENDENCIES = ["enocean"]
 EVENT_BUTTON_PRESSED = "button_pressed"
-CONF_CHANNEL = "channel"  # dm
-CONF_ONOFF = "onoff"  # dm
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_ID): vol.All(cv.ensure_list, [vol.Coerce(int)]),
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DEVICE_CLASS): DEVICE_CLASSES_SCHEMA,
-        vol.Optional(CONF_CHANNEL, default=99): cv.positive_int,  # dm
-        vol.Optional(CONF_ONOFF, default=99): cv.positive_int,  # dm
     }
 )
-
-entities = {}
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Binary Sensor platform for EnOcean."""
-
-    """Ignore if no config entry exist"""
-    if not hass.config_entries.async_entries(DOMAIN):
-        return
-
     dev_id = config.get(CONF_ID)
     dev_name = config.get(CONF_NAME)
     device_class = config.get(CONF_DEVICE_CLASS)
-    channel = config.get(CONF_CHANNEL)
-    onoff = config.get(CONF_ONOFF)
 
-    """
     add_entities([EnOceanBinarySensor(dev_id, dev_name, device_class)])
-    """
-
-    # dm
-    entity = EnOceanBinarySensor(dev_id, dev_name, device_class, channel, onoff)
-    setup_platform_dm(hass, config, add_entities, entity)
 
 
-class EnOceanBinarySensor(
-    enocean.EnOceanDevice, BinarySensorDevice, RestoreEntity
-):  # dm
+class EnOceanBinarySensor(enocean.EnOceanDevice, BinarySensorDevice):
     """Representation of EnOcean binary sensors such as wall switches.
 
     Supported EEPs (EnOcean Equipment Profiles):
@@ -69,15 +44,12 @@ class EnOceanBinarySensor(
     - F6-02-02 (Light and Blind Control - Application Style 1)
     """
 
-    def __init__(self, dev_id, dev_name, device_class, channel, onoff):
+    def __init__(self, dev_id, dev_name, device_class):
         """Initialize the EnOcean binary sensor."""
-        super().__init__(dev_id, dev_name, __name__)  # dm
+        super().__init__(dev_id, dev_name)
         self._device_class = device_class
         self.which = -1
         self.onoff = -1
-        self._state = False  # dm
-        self._channel = channel
-        self._onoff = onoff
 
     @property
     def name(self):
@@ -109,6 +81,8 @@ class EnOceanBinarySensor(
         elif packet.data[6] == 0x20:
             pushed = 0
 
+        self.schedule_update_ha_state()
+
         action = packet.data[1]
         if action == 0x70:
             self.which = 0
@@ -128,9 +102,6 @@ class EnOceanBinarySensor(
         elif action == 0x15:
             self.which = 10
             self.onoff = 1
-        elif action == 0x00:
-            self.which = -1
-            self.onoff = -1
         self.hass.bus.fire(
             EVENT_BUTTON_PRESSED,
             {
@@ -140,65 +111,3 @@ class EnOceanBinarySensor(
                 "onoff": self.onoff,
             },
         )
-
-        # dm
-        if (
-            (self._channel == 99 or self._channel == self.which)
-            and (self._onoff == 99 or self._onoff == self.onoff)
-        ) or (self.which == -1 and self.onoff == -1):
-            self._state = pushed == 1
-
-            if self.added_to_hass:  # dm
-                self.schedule_update_ha_state()
-
-    # dm
-    @property
-    def is_on(self) -> bool:
-        """Return True if the switch is on based on the state machine."""
-        if self._state is None:
-            return False
-        return self._state
-
-    # dm
-    async def async_added_to_hass(self):
-        """Restore device state (ON/OFF/Brightness)."""
-        await super().async_added_to_hass()
-
-        old_state = await self.async_get_last_state()
-
-        if old_state is not None:
-            self._state = old_state.state == STATE_ON
-
-    @property
-    def device_state_attributes(self):
-        """Return the device state attributes."""
-        attr = {}
-        return attr
-
-
-# dm
-def setup_platform_dm(hass, config, add_entities, entity):
-    """Set up platform entry."""
-    entity._area_name = config.get("area_name")
-    entity._manufacturer = config.get("manufacturer")
-    entity._model = config.get("model")
-    entities[entity.dev_name] = entity
-
-
-# dm
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the EnOcean config entry."""
-
-    area_registry = await ar.async_get_registry(hass)
-
-    areas = area_registry.async_list_areas()
-
-    for key, entity in entities.items():
-        for area in areas:
-            if entity._area_name:
-                if entity.area_name.lower() == area.name.lower():
-                    entity._area_id = area.id
-                    entity._area_name = entity.area_name
-        _LOGGER.debug("Adding entity: %s", entity.dev_name)
-
-    async_add_entities(entities.values(), True)

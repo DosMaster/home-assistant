@@ -1,18 +1,15 @@
 """Support for EnOcean sensors."""
-import logging  # dm
+import logging
 
 import voluptuous as vol
 
-# dm
-# from homeassistant.components.sensor import PLATFORM_SCHEMA #dm
 from homeassistant.components import enocean
-from homeassistant.components.enocean import PLATFORM_SCHEMA
+from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_ID,
     CONF_NAME,
     DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_ILLUMINANCE,
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
     POWER_WATT,
@@ -21,7 +18,6 @@ from homeassistant.const import (
     TEMP_CELSIUS,
     UNIT_PERCENTAGE,
 )
-import homeassistant.helpers.area_registry as ar
 import homeassistant.helpers.config_validation as cv
 
 _LOGGER = logging.getLogger(__name__)
@@ -37,12 +33,6 @@ SENSOR_TYPE_HUMIDITY = "humidity"
 SENSOR_TYPE_POWER = "powersensor"
 SENSOR_TYPE_TEMPERATURE = "temperature"
 SENSOR_TYPE_WINDOWHANDLE = "windowhandle"
-# dm
-SENSOR_TYPE_ILLUMINANCE = "light"
-CONF_DEVICE_TYPE = "device_type"
-EVENT_PIR_CHANGED = "pir_changed"
-SENSOR_TYPE_TIMER = "timer"
-DEVICE_CLASS_TIMER = "timer"
 
 SENSOR_TYPES = {
     SENSOR_TYPE_HUMIDITY: {
@@ -69,18 +59,6 @@ SENSOR_TYPES = {
         "icon": "mdi:window",
         "class": None,
     },
-    SENSOR_TYPE_ILLUMINANCE: {  # dm
-        "name": "Illuminance",  # dm
-        "unit": "lx",  # dm
-        "icon": "mdi:brightness-6",  # dm
-        "class": DEVICE_CLASS_ILLUMINANCE,  # dm
-    },
-    SENSOR_TYPE_TIMER: {  # dm
-        "name": "Timer",  # dm
-        "unit": "",  # dm
-        "icon": "mdi:timer",  # dm
-        "class": DEVICE_CLASS_TIMER,  # dm
-    },
 }
 
 
@@ -93,11 +71,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_MIN_TEMP, default=0): vol.Coerce(int),
         vol.Optional(CONF_RANGE_FROM, default=255): cv.positive_int,
         vol.Optional(CONF_RANGE_TO, default=0): cv.positive_int,
-        vol.Optional(CONF_DEVICE_TYPE, default="std"): cv.string,  # dm
     }
 )
-
-entities = []  # dm
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -106,37 +81,27 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     dev_name = config.get(CONF_NAME)
     sensor_type = config.get(CONF_DEVICE_CLASS)
 
-    # dm
-    entity = None
     if sensor_type == SENSOR_TYPE_TEMPERATURE:
         temp_min = config.get(CONF_MIN_TEMP)
         temp_max = config.get(CONF_MAX_TEMP)
         range_from = config.get(CONF_RANGE_FROM)
         range_to = config.get(CONF_RANGE_TO)
-        entity = EnOceanTemperatureSensor(  # dm
-            dev_id, dev_name, temp_min, temp_max, range_from, range_to
+        add_entities(
+            [
+                EnOceanTemperatureSensor(
+                    dev_id, dev_name, temp_min, temp_max, range_from, range_to
+                )
+            ]
         )
 
     elif sensor_type == SENSOR_TYPE_HUMIDITY:
-        entity = EnOceanHumiditySensor(dev_id, dev_name)  # dm
+        add_entities([EnOceanHumiditySensor(dev_id, dev_name)])
 
     elif sensor_type == SENSOR_TYPE_POWER:
-        entity = EnOceanPowerSensor(dev_id, dev_name)  # dm
+        add_entities([EnOceanPowerSensor(dev_id, dev_name)])
 
     elif sensor_type == SENSOR_TYPE_WINDOWHANDLE:
-        entity = EnOceanWindowHandle(dev_id, dev_name)  # dm
-    # dm
-    elif sensor_type == SENSOR_TYPE_ILLUMINANCE:
-        dev_type = config.get(CONF_DEVICE_TYPE)
-        entity = EnOceanIlluminanceSensor(dev_id, dev_name, dev_type)
-    # dm
-    elif sensor_type == SENSOR_TYPE_TIMER:
-        entity = EnOceanTimer(dev_id, dev_name)
-    else:
-        _LOGGER.error("Sensor type " "%s" " not found.", sensor_type)
-
-    if entity:
-        setup_platform_dm(hass, config, add_entities, entity)
+        add_entities([EnOceanWindowHandle(dev_id, dev_name)])
 
 
 class EnOceanSensor(enocean.EnOceanDevice):
@@ -144,7 +109,7 @@ class EnOceanSensor(enocean.EnOceanDevice):
 
     def __init__(self, dev_id, dev_name, sensor_type):
         """Initialize the EnOcean sensor device."""
-        super().__init__(dev_id, dev_name, __name__)  # dm
+        super().__init__(dev_id, dev_name)
         self._sensor_type = sensor_type
         self._device_class = SENSOR_TYPES[self._sensor_type]["class"]
         self._dev_name = f"{SENSOR_TYPES[self._sensor_type]['name']} {dev_name}"
@@ -290,141 +255,3 @@ class EnOceanWindowHandle(EnOceanSensor):
             self._state = "tilt"
 
         self.schedule_update_ha_state()
-
-
-# dm
-class EnOceanIlluminanceSensor(EnOceanSensor):
-    """Representation of an EnOcean Illuminance sensor device.
-
-    EEPs (EnOcean Equipment Profiles):
-    - A5-06-01 (Illuminance Sensor 300-30.000lx)
-
-    Additional Support For:
-    - FAH60 (Eltako)    use "device_type: FAH60"
-    - FBH63 (Eltako)
-    """
-
-    def __init__(self, dev_id, dev_name, dev_type):
-        """Initialize the EnOcean Illuminance sensor device."""
-        super().__init__(dev_id, dev_name, SENSOR_TYPE_ILLUMINANCE)
-        # self._scale_min = 300
-        # self._scale_max = 30000
-        # self._scale_min = 300
-        # self._scale_max = 30000
-        # self.range_from = 0
-        # self.range_to = 255
-        # Illuminance_scale = self._scale_max - self._scale_min
-        # Illuminance_range = self.range_to - self.range_from
-        # raw_val = packet.data[3]
-        # Illuminance = Illuminance_scale / Illuminance_range * (raw_val - self.range_from)
-        # Illuminance += self._scale_min
-
-        if (
-            dev_type.lower() == "std"
-            or dev_type.lower() == "fah60"
-            or dev_type.lower() == "fbh63"
-        ):
-            self.dev_type = dev_type.lower()
-        else:
-            self.dev_type = None
-            _LOGGER.warning('device_type "%s" (%s) unknown', dev_type, dev_name)
-
-    def value_changed(self, packet):
-        """Update the internal state of the sensor."""
-        if (
-            packet.data[0] != 0xA5
-            or (self.dev_type == "fah60" and packet.data[3] == 0x87)
-            or (self.dev_type == "fbh63" and packet.data[4] == 0x85)
-        ):
-            return
-        raw_val = packet.data[2]
-        raw_val2 = packet.data[1]
-        if self.dev_type == "fah60" and raw_val == 0:
-            Illuminance_scale = 100 - 0
-            Illuminance_range = 100 - 0
-            Illuminance = Illuminance_scale / Illuminance_range * (raw_val2 - 0)
-            Illuminance += 0
-        elif self.dev_type == "fbh63":
-            Illuminance_scale = 2048 - 0
-            Illuminance_range = 255 - 0
-            Illuminance = Illuminance_scale / Illuminance_range * (raw_val - 0)
-            Illuminance += 0
-            motion = packet.data[4] == 0x0D
-            self.hass.bus.fire(EVENT_PIR_CHANGED, {"id": self.dev_id, "pushed": motion})
-        else:
-            Illuminance_scale = 30000 - 300
-            Illuminance_range = 255 - 0
-            Illuminance = Illuminance_scale / Illuminance_range * (raw_val - 0)
-            Illuminance += 300
-        self._state = round(Illuminance, 0)
-        self.schedule_update_ha_state()
-
-
-class EnOceanTimer(EnOceanSensor):
-    """Representation of an EnOcean timer device."""
-
-    def __init__(self, dev_id, dev_name):
-        """Initialize the EnOcean temperature sensor device."""
-        super().__init__(dev_id, dev_name, SENSOR_TYPE_TIMER)
-
-    def value_changed(self, packet):
-        """Update the internal state of the sensor."""
-        if packet.data[0] != 0xA5 or (packet.data[4] & 0x40) != 0x40:
-            return
-
-        weekdays = [
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-            "Sunday",
-        ]
-        weekday = (packet.data[1] & 0xE0) >> 5
-        hour = packet.data[1] & 0x1F
-        minute = packet.data[2] & 0x2F
-        # ampm = "am" if (packet.data[4] & 0x2) == 0 else "pm"
-        # format24 = "24" if (packet.data[4] & 0x04) == 0 else "12"
-        self._state = (
-            "{:02d}".format(hour)
-            + ":"
-            + "{:02d}".format(minute)
-            + " ("
-            + weekdays[weekday - 1]
-            + ")"
-        )
-
-        self.schedule_update_ha_state()
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
-
-
-# dm
-def setup_platform_dm(hass, config, add_entities, entity):
-    """Set platform entry."""
-    entity._area_name = config.get("area_name")
-    entity._manufacturer = config.get("manufacturer")
-    entity._model = config.get("model")
-    entities.append(entity)
-
-
-# dm
-async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the EnOcean config entry."""
-
-    area_registry = await ar.async_get_registry(hass)
-
-    areas = area_registry.async_list_areas()
-
-    for entity in entities:
-        for area in areas:
-            if entity._area_name:
-                if entity.area_name.lower() == area.name.lower():
-                    entity._area_id = area.id
-                    entity._area_name = entity.area_name
-
-    async_add_entities(entities, True)
