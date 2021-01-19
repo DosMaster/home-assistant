@@ -3,12 +3,12 @@ from datetime import datetime
 import logging
 from typing import Any, Dict, Optional
 
-from surepy import SureLocationID, SureProductID
+from surepy import SureLocationID, SurepyProduct
 
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_PRESENCE,
-    BinarySensorDevice,
+    BinarySensorEntity,
 )
 from homeassistant.const import CONF_ID, CONF_TYPE
 from homeassistant.core import callback
@@ -37,15 +37,15 @@ async def async_setup_platform(
 
         # connectivity
         if sure_type in [
-            SureProductID.CAT_FLAP,
-            SureProductID.PET_FLAP,
-            SureProductID.FEEDER,
+            SurepyProduct.CAT_FLAP,
+            SurepyProduct.PET_FLAP,
+            SurepyProduct.FEEDER,
         ]:
             entities.append(DeviceConnectivity(sure_id, sure_type, spc))
 
-        if sure_type == SureProductID.PET:
+        if sure_type == SurepyProduct.PET:
             entity = Pet(sure_id, spc)
-        elif sure_type == SureProductID.HUB:
+        elif sure_type == SurepyProduct.HUB:
             entity = Hub(sure_id, spc)
         else:
             continue
@@ -55,7 +55,7 @@ async def async_setup_platform(
     async_add_entities(entities, True)
 
 
-class SurePetcareBinarySensor(BinarySensorDevice):
+class SurePetcareBinarySensor(BinarySensorEntity):
     """A binary sensor implementation for Sure Petcare Entities."""
 
     def __init__(
@@ -63,7 +63,7 @@ class SurePetcareBinarySensor(BinarySensorDevice):
         _id: int,
         spc: SurePetcareAPI,
         device_class: str,
-        sure_type: SureProductID,
+        sure_type: SurepyProduct,
     ):
         """Initialize a Sure Petcare binary sensor."""
         self._id = _id
@@ -105,7 +105,7 @@ class SurePetcareBinarySensor(BinarySensorDevice):
         return None if not self._device_class else self._device_class
 
     @property
-    def unique_id(self: BinarySensorDevice) -> str:
+    def unique_id(self) -> str:
         """Return an unique ID."""
         return f"{self._spc_data['household_id']}-{self._id}"
 
@@ -138,7 +138,7 @@ class Hub(SurePetcareBinarySensor):
 
     def __init__(self, _id: int, spc: SurePetcareAPI) -> None:
         """Initialize a Sure Petcare Hub."""
-        super().__init__(_id, spc, DEVICE_CLASS_CONNECTIVITY, SureProductID.HUB)
+        super().__init__(_id, spc, DEVICE_CLASS_CONNECTIVITY, SurepyProduct.HUB)
 
     @property
     def available(self) -> bool:
@@ -168,7 +168,7 @@ class Pet(SurePetcareBinarySensor):
 
     def __init__(self, _id: int, spc: SurePetcareAPI) -> None:
         """Initialize a Sure Petcare Pet."""
-        super().__init__(_id, spc, DEVICE_CLASS_PRESENCE, SureProductID.PET)
+        super().__init__(_id, spc, DEVICE_CLASS_PRESENCE, SurepyProduct.PET)
 
     @property
     def is_on(self) -> bool:
@@ -203,7 +203,10 @@ class DeviceConnectivity(SurePetcareBinarySensor):
     """Sure Petcare Pet."""
 
     def __init__(
-        self, _id: int, sure_type: SureProductID, spc: SurePetcareAPI,
+        self,
+        _id: int,
+        sure_type: SurepyProduct,
+        spc: SurePetcareAPI,
     ) -> None:
         """Initialize a Sure Petcare Device."""
         super().__init__(_id, spc, DEVICE_CLASS_CONNECTIVITY, sure_type)
@@ -214,7 +217,7 @@ class DeviceConnectivity(SurePetcareBinarySensor):
         return f"{self._name}_connectivity"
 
     @property
-    def unique_id(self: BinarySensorDevice) -> str:
+    def unique_id(self) -> str:
         """Return an unique ID."""
         return f"{self._spc_data['household_id']}-{self._id}-connectivity"
 

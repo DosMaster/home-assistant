@@ -1,10 +1,11 @@
 """Tests for the Freebox config flow."""
+from unittest.mock import AsyncMock, patch
+
 from aiofreepybox.exceptions import (
     AuthorizationError,
     HttpRequestError,
     InvalidTokenError,
 )
-from asynctest import CoroutineMock, patch
 import pytest
 
 from homeassistant import data_entry_flow
@@ -22,11 +23,17 @@ PORT = 1234
 def mock_controller_connect():
     """Mock a successful connection."""
     with patch("homeassistant.components.freebox.router.Freepybox") as service_mock:
-        service_mock.return_value.open = CoroutineMock()
-        service_mock.return_value.system.get_config = CoroutineMock()
-        service_mock.return_value.lan.get_hosts_list = CoroutineMock()
-        service_mock.return_value.connection.get_status = CoroutineMock()
-        service_mock.return_value.close = CoroutineMock()
+        service_mock.return_value.open = AsyncMock()
+        service_mock.return_value.system.get_config = AsyncMock(
+            return_value={
+                "mac": "abcd",
+                "model_info": {"pretty_name": "Pretty Model"},
+                "firmware_version": "123",
+            }
+        )
+        service_mock.return_value.lan.get_hosts_list = AsyncMock()
+        service_mock.return_value.connection.get_status = AsyncMock()
+        service_mock.return_value.close = AsyncMock()
         yield service_mock
 
 
@@ -133,7 +140,7 @@ async def test_on_link_failed(hass):
     ):
         result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
         assert result["type"] == data_entry_flow.RESULT_TYPE_FORM
-        assert result["errors"] == {"base": "connection_failed"}
+        assert result["errors"] == {"base": "cannot_connect"}
 
     with patch(
         "homeassistant.components.freebox.router.Freepybox.open",

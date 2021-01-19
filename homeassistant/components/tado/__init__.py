@@ -1,27 +1,36 @@
 """Support for the (unofficial) Tado API."""
+import asyncio
 from datetime import timedelta
 import logging
 
 from PyTado.interface import Tado
 from requests import RequestException
+import requests.exceptions
 import voluptuous as vol
 
 from homeassistant.components.climate.const import PRESET_AWAY, PRESET_HOME
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.discovery import load_platform
 from homeassistant.helpers.dispatcher import dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import Throttle
 
-from .const import CONF_FALLBACK, DATA
+from .const import (
+    CONF_FALLBACK,
+    DATA,
+    DOMAIN,
+    SIGNAL_TADO_UPDATE_RECEIVED,
+    UPDATE_LISTENER,
+    UPDATE_TRACK,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-DOMAIN = "tado"
 
-SIGNAL_TADO_UPDATE_RECEIVED = "tado_update_received_{}_{}"
-
-TADO_COMPONENTS = ["sensor", "climate", "water_heater"]
+TADO_COMPONENTS = ["binary_sensor", "sensor", "climate", "water_heater"]
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 SCAN_INTERVAL = timedelta(seconds=15)
@@ -43,43 +52,110 @@ CONFIG_SCHEMA = vol.Schema(
 )
 
 
-def setup(hass, config):
-    """Set up of the Tado component."""
-    acc_list = config[DOMAIN]
+async def async_setup(hass: HomeAssistant, config: dict):
+    """Set up the Tado component."""
 
-    api_data_list = []
+    hass.data.setdefault(DOMAIN, {})
 
-    for acc in acc_list:
-        username = acc[CONF_USERNAME]
-        password = acc[CONF_PASSWORD]
-        fallback = acc[CONF_FALLBACK]
+    if DOMAIN not in config:
+        return True
 
-        tadoconnector = TadoConnector(hass, username, password, fallback)
-        if not tadoconnector.setup():
-            continue
-
-        # Do first update
-        tadoconnector.update()
-
-        api_data_list.append(tadoconnector)
-        # Poll for updates in the background
-        hass.helpers.event.track_time_interval(
-            # we're using here tadoconnector as a parameter of lambda
-            # to capture actual value instead of closuring of latest value
-            lambda now, tc=tadoconnector: tc.update(),
-            SCAN_INTERVAL,
-        )
-
-    hass.data[DOMAIN] = {}
-    hass.data[DOMAIN][DATA] = api_data_list
-
-    # Load components
-    for component in TADO_COMPONENTS:
-        load_platform(
-            hass, component, DOMAIN, {}, config,
+    for conf in config[DOMAIN]:
+        hass.async_create_task(
+            hass.config_entries.flow.async_init(
+                DOMAIN,
+                context={"source": SOURCE_IMPORT},
+                data=conf,
+            )
         )
 
     return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up Tado from a config entry."""
+
+    _async_import_options_from_data_if_missing(hass, entry)
+
+    username = entry.data[CONF_USERNAME]
+    password = entry.data[CONF_PASSWORD]
+    fallback = entry.options.get(CONF_FALLBACK, True)
+
+    tadoconnector = TadoConnector(hass, username, password, fallback)
+
+    try:
+        await hass.async_add_executor_job(tadoconnector.setup)
+    except KeyError:
+        _LOGGER.error("Failed to login to tado")
+        return False
+    except RuntimeError as exc:
+        _LOGGER.error("Failed to setup tado: %s", exc)
+        return ConfigEntryNotReady
+    except requests.exceptions.Timeout as ex:
+        raise ConfigEntryNotReady from ex
+    except requests.exceptions.HTTPError as ex:
+        if ex.response.status_code > 400 and ex.response.status_code < 500:
+            _LOGGER.error("Failed to login to tado: %s", ex)
+            return False
+        raise ConfigEntryNotReady from ex
+
+    # Do first update
+    await hass.async_add_executor_job(tadoconnector.update)
+
+    # Poll for updates in the background
+    update_track = async_track_time_interval(
+        hass,
+        lambda now: tadoconnector.update(),
+        SCAN_INTERVAL,
+    )
+
+    update_listener = entry.add_update_listener(_async_update_listener)
+
+    hass.data[DOMAIN][entry.entry_id] = {
+        DATA: tadoconnector,
+        UPDATE_TRACK: update_track,
+        UPDATE_LISTENER: update_listener,
+    }
+
+    for component in TADO_COMPONENTS:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, component)
+        )
+
+    return True
+
+
+@callback
+def _async_import_options_from_data_if_missing(hass: HomeAssistant, entry: ConfigEntry):
+    options = dict(entry.options)
+    if CONF_FALLBACK not in options:
+        options[CONF_FALLBACK] = entry.data.get(CONF_FALLBACK, True)
+        hass.config_entries.async_update_entry(entry, options=options)
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry):
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload a config entry."""
+    unload_ok = all(
+        await asyncio.gather(
+            *[
+                hass.config_entries.async_forward_entry_unload(entry, component)
+                for component in TADO_COMPONENTS
+            ]
+        )
+    )
+
+    hass.data[DOMAIN][entry.entry_id][UPDATE_TRACK]()
+    hass.data[DOMAIN][entry.entry_id][UPDATE_LISTENER]()
+
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id)
+
+    return unload_ok
 
 
 class TadoConnector:
@@ -92,13 +168,13 @@ class TadoConnector:
         self._password = password
         self._fallback = fallback
 
-        self.device_id = None
+        self.home_id = None
         self.tado = None
         self.zones = None
         self.devices = None
         self.data = {
-            "zone": {},
             "device": {},
+            "zone": {},
         }
 
     @property
@@ -108,55 +184,52 @@ class TadoConnector:
 
     def setup(self):
         """Connect to Tado and fetch the zones."""
-        try:
-            self.tado = Tado(self._username, self._password)
-        except (RuntimeError, RequestException) as exc:
-            _LOGGER.error("Unable to connect: %s", exc)
-            return False
-
+        self.tado = Tado(self._username, self._password)
         self.tado.setDebugging(True)
-
         # Load zones and devices
         self.zones = self.tado.getZones()
-        self.devices = self.tado.getMe()["homes"]
-        self.device_id = self.devices[0]["id"]
-        return True
+        self.devices = self.tado.getDevices()
+        self.home_id = self.tado.getMe()["homes"][0]["id"]
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         """Update the registered zones."""
+        for device in self.devices:
+            self.update_sensor("device", device["shortSerialNo"])
         for zone in self.zones:
             self.update_sensor("zone", zone["id"])
-        for device in self.devices:
-            self.update_sensor("device", device["id"])
 
     def update_sensor(self, sensor_type, sensor):
         """Update the internal data from Tado."""
         _LOGGER.debug("Updating %s %s", sensor_type, sensor)
         try:
-            if sensor_type == "zone":
+            if sensor_type == "device":
+                data = self.tado.getDeviceInfo(sensor)
+            elif sensor_type == "zone":
                 data = self.tado.getZoneState(sensor)
-            elif sensor_type == "device":
-                devices_data = self.tado.getDevices()
-                if not devices_data:
-                    _LOGGER.info("There are no devices to setup on this tado account.")
-                    return
-
-                data = devices_data[0]
             else:
                 _LOGGER.debug("Unknown sensor: %s", sensor_type)
                 return
         except RuntimeError:
             _LOGGER.error(
-                "Unable to connect to Tado while updating %s %s", sensor_type, sensor,
+                "Unable to connect to Tado while updating %s %s",
+                sensor_type,
+                sensor,
             )
             return
 
         self.data[sensor_type][sensor] = data
 
-        _LOGGER.debug("Dispatching update to %s %s: %s", sensor_type, sensor, data)
+        _LOGGER.debug(
+            "Dispatching update to %s %s %s: %s",
+            self.home_id,
+            sensor_type,
+            sensor,
+            data,
+        )
         dispatcher_send(
-            self.hass, SIGNAL_TADO_UPDATE_RECEIVED.format(sensor_type, sensor)
+            self.hass,
+            SIGNAL_TADO_UPDATE_RECEIVED.format(self.home_id, sensor_type, sensor),
         )
 
     def get_capabilities(self, zone_id):
@@ -169,7 +242,8 @@ class TadoConnector:
         self.update_sensor("zone", zone_id)
 
     def set_presence(
-        self, presence=PRESET_HOME,
+        self,
+        presence=PRESET_HOME,
     ):
         """Set the presence to home or away."""
         if presence == PRESET_AWAY:

@@ -1,5 +1,6 @@
 """The test for the NuHeat thermostat module."""
-from asynctest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock
+
 from nuheat.config import SCHEDULE_HOLD, SCHEDULE_RUN, SCHEDULE_TEMPORARY_HOLD
 
 from homeassistant.components.nuheat.const import DOMAIN
@@ -102,6 +103,8 @@ def _get_mock_thermostat_schedule_temporary_hold():
         target_celsius=43,
         target_fahrenheit=99,
         target_temperature=3729,
+        max_temperature=5000,
+        min_temperature=1,
     )
 
     thermostat.get_data = Mock()

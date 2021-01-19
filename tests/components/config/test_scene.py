@@ -1,7 +1,6 @@
 """Test Automation config panel."""
 import json
-
-from asynctest import patch
+from unittest.mock import patch
 
 from homeassistant.bootstrap import async_setup_component
 from homeassistant.components import config

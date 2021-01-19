@@ -1,8 +1,7 @@
 """The tests for the webdav calendar component."""
 import datetime
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
 
-from asynctest import patch
 from caldav.objects import Event
 import pytest
 

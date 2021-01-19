@@ -5,9 +5,9 @@ For more details about this component, please refer to the documentation at
 https://home-assistant.io/integrations/zha/
 """
 import asyncio
-import logging
+from typing import Coroutine
 
-from zigpy.exceptions import DeliveryError
+from zigpy.exceptions import ZigbeeException
 import zigpy.zcl.clusters.security as security
 
 from homeassistant.core import callback
@@ -21,16 +21,12 @@ from ..const import (
     WARNING_DEVICE_STROBE_HIGH,
     WARNING_DEVICE_STROBE_YES,
 )
-from .base import ZigbeeChannel
-
-_LOGGER = logging.getLogger(__name__)
+from .base import ChannelStatus, ZigbeeChannel
 
 
 @registries.ZIGBEE_CHANNEL_REGISTRY.register(security.IasAce.cluster_id)
 class IasAce(ZigbeeChannel):
     """IAS Ancillary Control Equipment channel."""
-
-    pass
 
 
 @registries.CHANNEL_ONLY_CLUSTERS.register(security.IasWd.cluster_id)
@@ -114,7 +110,6 @@ class IasWd(ZigbeeChannel):
         )
 
 
-@registries.BINARY_SENSOR_CLUSTERS.register(security.IasZone.cluster_id)
 @registries.ZIGBEE_CHANNEL_REGISTRY.register(security.IasZone.cluster_id)
 class IASZoneChannel(ZigbeeChannel):
     """Channel for the IASZone Zigbee cluster."""
@@ -153,13 +148,18 @@ class IASZoneChannel(ZigbeeChannel):
                 self._cluster.ep_attribute,
                 res[0],
             )
-        except DeliveryError as ex:
+        except ZigbeeException as ex:
             self.debug(
                 "Failed to write cie_addr: %s to '%s' cluster: %s",
                 str(ieee),
                 self._cluster.ep_attribute,
                 str(ex),
             )
+
+        self.debug("Sending pro-active IAS enroll response")
+        self._cluster.create_catching_task(self._cluster.enroll_response(0, 0))
+
+        self._status = ChannelStatus.CONFIGURED
         self.debug("finished IASZoneChannel configuration")
 
     @callback
@@ -174,8 +174,7 @@ class IASZoneChannel(ZigbeeChannel):
                 value,
             )
 
-    async def async_initialize(self, from_cache):
+    def async_initialize_channel_specific(self, from_cache: bool) -> Coroutine:
         """Initialize channel."""
-        attributes = ["zone_status", "zone_state"]
-        await self.get_attributes(attributes, from_cache=from_cache)
-        await super().async_initialize(from_cache)
+        attributes = ["zone_status", "zone_state", "zone_type"]
+        return self.get_attributes(attributes, from_cache=from_cache)

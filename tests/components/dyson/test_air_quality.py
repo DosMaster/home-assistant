@@ -1,8 +1,8 @@
 """Test the Dyson air quality component."""
 import json
 from unittest import mock
+from unittest.mock import patch
 
-import asynctest
 from libpurecool.dyson_pure_cool import DysonPureCool
 from libpurecool.dyson_pure_state_v2 import DysonEnvironmentalSensorV2State
 
@@ -17,14 +17,14 @@ import homeassistant.components.dyson.air_quality as dyson
 from homeassistant.helpers import discovery
 from homeassistant.setup import async_setup_component
 
+from .common import load_mock_device
+
 
 def _get_dyson_purecool_device():
     """Return a valid device as provided by the Dyson web services."""
     device = mock.Mock(spec=DysonPureCool)
-    device.serial = "XX-XXXXX-XX"
+    load_mock_device(device)
     device.name = "Living room"
-    device.connect = mock.Mock(return_value=True)
-    device.auto_connect = mock.Mock(return_value=True)
     device.environmental_state.particulate_matter_25 = "0014"
     device.environmental_state.particulate_matter_10 = "0025"
     device.environmental_state.nitrogen_dioxide = "0042"
@@ -46,8 +46,8 @@ def _get_config():
     }
 
 
-@asynctest.patch("libpurecool.dyson.DysonAccount.login", return_value=True)
-@asynctest.patch(
+@patch("libpurecool.dyson.DysonAccount.login", return_value=True)
+@patch(
     "libpurecool.dyson.DysonAccount.devices",
     return_value=[_get_dyson_purecool_device()],
 )
@@ -65,8 +65,8 @@ async def test_purecool_aiq_attributes(devices, login, hass):
     assert attributes[dyson.ATTR_VOC] == 35
 
 
-@asynctest.patch("libpurecool.dyson.DysonAccount.login", return_value=True)
-@asynctest.patch(
+@patch("libpurecool.dyson.DysonAccount.login", return_value=True)
+@patch(
     "libpurecool.dyson.DysonAccount.devices",
     return_value=[_get_dyson_purecool_device()],
 )
@@ -108,8 +108,8 @@ async def test_purecool_aiq_update_state(devices, login, hass):
     assert attributes[dyson.ATTR_VOC] == 55
 
 
-@asynctest.patch("libpurecool.dyson.DysonAccount.login", return_value=True)
-@asynctest.patch(
+@patch("libpurecool.dyson.DysonAccount.login", return_value=True)
+@patch(
     "libpurecool.dyson.DysonAccount.devices",
     return_value=[_get_dyson_purecool_device()],
 )
@@ -124,8 +124,8 @@ async def test_purecool_component_setup_only_once(devices, login, hass):
     assert len(hass.data[dyson.DYSON_AIQ_DEVICES]) == 1
 
 
-@asynctest.patch("libpurecool.dyson.DysonAccount.login", return_value=True)
-@asynctest.patch(
+@patch("libpurecool.dyson.DysonAccount.login", return_value=True)
+@patch(
     "libpurecool.dyson.DysonAccount.devices",
     return_value=[_get_dyson_purecool_device()],
 )
@@ -140,8 +140,8 @@ async def test_purecool_aiq_without_discovery(devices, login, hass):
     assert add_entities_mock.call_count == 0
 
 
-@asynctest.patch("libpurecool.dyson.DysonAccount.login", return_value=True)
-@asynctest.patch(
+@patch("libpurecool.dyson.DysonAccount.login", return_value=True)
+@patch(
     "libpurecool.dyson.DysonAccount.devices",
     return_value=[_get_dyson_purecool_device()],
 )

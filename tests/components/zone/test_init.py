@@ -1,5 +1,6 @@
 """Test zone component."""
-from asynctest import patch
+from unittest.mock import patch
+
 import pytest
 
 from homeassistant import setup

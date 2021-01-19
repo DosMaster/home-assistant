@@ -1,8 +1,8 @@
 """The tests for the Unifi direct device tracker platform."""
 from datetime import timedelta
 import os
+from unittest.mock import MagicMock, call, patch
 
-from asynctest import mock, patch
 import pytest
 import voluptuous as vol
 
@@ -16,6 +16,7 @@ from homeassistant.components.unifi_direct.device_tracker import (
     CONF_PORT,
     DOMAIN,
     PLATFORM_SCHEMA,
+    UnifiDeviceScanner,
     _response_to_json,
     get_scanner,
 )
@@ -37,7 +38,7 @@ def setup_comp(hass):
         os.remove(yaml_devices)
 
 
-@patch(scanner_path, return_value=mock.MagicMock())
+@patch(scanner_path, return_value=MagicMock(spec=UnifiDeviceScanner))
 async def test_get_scanner(unifi_mock, hass):
     """Test creating an Unifi direct scanner with a password."""
     conf_dict = {
@@ -56,7 +57,7 @@ async def test_get_scanner(unifi_mock, hass):
         assert await async_setup_component(hass, DOMAIN, conf_dict)
 
     conf_dict[DOMAIN][CONF_PORT] = 22
-    assert unifi_mock.call_args == mock.call(conf_dict[DOMAIN])
+    assert unifi_mock.call_args == call(conf_dict[DOMAIN])
 
 
 @patch("pexpect.pxssh.pxssh")

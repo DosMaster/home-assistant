@@ -1,6 +1,11 @@
 """Test shopping list component."""
 
-from homeassistant.components.websocket_api.const import TYPE_RESULT
+from homeassistant.components.websocket_api.const import (
+    ERR_INVALID_FORMAT,
+    ERR_NOT_FOUND,
+    TYPE_RESULT,
+)
+from homeassistant.const import HTTP_NOT_FOUND
 from homeassistant.helpers import intent
 
 
@@ -99,7 +104,7 @@ async def test_deprecated_api_update(hass, hass_client, sl_setup):
 
     client = await hass_client()
     resp = await client.post(
-        "/api/shopping_list/item/{}".format(beer_id), json={"name": "soda"}
+        f"/api/shopping_list/item/{beer_id}", json={"name": "soda"}
     )
 
     assert resp.status == 200
@@ -107,7 +112,7 @@ async def test_deprecated_api_update(hass, hass_client, sl_setup):
     assert data == {"id": beer_id, "name": "soda", "complete": False}
 
     resp = await client.post(
-        "/api/shopping_list/item/{}".format(wine_id), json={"complete": True}
+        f"/api/shopping_list/item/{wine_id}", json={"complete": True}
     )
 
     assert resp.status == 200
@@ -171,12 +176,10 @@ async def test_api_update_fails(hass, hass_client, sl_setup):
     client = await hass_client()
     resp = await client.post("/api/shopping_list/non_existing", json={"name": "soda"})
 
-    assert resp.status == 404
+    assert resp.status == HTTP_NOT_FOUND
 
     beer_id = hass.data["shopping_list"].items[0]["id"]
-    resp = await client.post(
-        "/api/shopping_list/item/{}".format(beer_id), json={"name": 123}
-    )
+    resp = await client.post(f"/api/shopping_list/item/{beer_id}", json={"name": 123})
 
     assert resp.status == 400
 
@@ -221,7 +224,7 @@ async def test_deprecated_api_clear_completed(hass, hass_client, sl_setup):
 
     # Mark beer as completed
     resp = await client.post(
-        "/api/shopping_list/item/{}".format(beer_id), json={"complete": True}
+        f"/api/shopping_list/item/{beer_id}", json={"complete": True}
     )
     assert resp.status == 200
 
@@ -312,3 +315,125 @@ async def test_ws_add_item_fail(hass, hass_ws_client, sl_setup):
     msg = await client.receive_json()
     assert msg["success"] is False
     assert len(hass.data["shopping_list"].items) == 0
+
+
+async def test_ws_reorder_items(hass, hass_ws_client, sl_setup):
+    """Test reordering shopping_list items websocket command."""
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "beer"}}
+    )
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "wine"}}
+    )
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "apple"}}
+    )
+
+    beer_id = hass.data["shopping_list"].items[0]["id"]
+    wine_id = hass.data["shopping_list"].items[1]["id"]
+    apple_id = hass.data["shopping_list"].items[2]["id"]
+
+    client = await hass_ws_client(hass)
+    await client.send_json(
+        {
+            "id": 6,
+            "type": "shopping_list/items/reorder",
+            "item_ids": [wine_id, apple_id, beer_id],
+        }
+    )
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    assert hass.data["shopping_list"].items[0] == {
+        "id": wine_id,
+        "name": "wine",
+        "complete": False,
+    }
+    assert hass.data["shopping_list"].items[1] == {
+        "id": apple_id,
+        "name": "apple",
+        "complete": False,
+    }
+    assert hass.data["shopping_list"].items[2] == {
+        "id": beer_id,
+        "name": "beer",
+        "complete": False,
+    }
+
+    # Mark wine as completed.
+    await client.send_json(
+        {
+            "id": 7,
+            "type": "shopping_list/items/update",
+            "item_id": wine_id,
+            "complete": True,
+        }
+    )
+    _ = await client.receive_json()
+
+    await client.send_json(
+        {
+            "id": 8,
+            "type": "shopping_list/items/reorder",
+            "item_ids": [apple_id, beer_id],
+        }
+    )
+    msg = await client.receive_json()
+    assert msg["success"] is True
+    assert hass.data["shopping_list"].items[0] == {
+        "id": apple_id,
+        "name": "apple",
+        "complete": False,
+    }
+    assert hass.data["shopping_list"].items[1] == {
+        "id": beer_id,
+        "name": "beer",
+        "complete": False,
+    }
+    assert hass.data["shopping_list"].items[2] == {
+        "id": wine_id,
+        "name": "wine",
+        "complete": True,
+    }
+
+
+async def test_ws_reorder_items_failure(hass, hass_ws_client, sl_setup):
+    """Test reordering shopping_list items websocket command."""
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "beer"}}
+    )
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "wine"}}
+    )
+    await intent.async_handle(
+        hass, "test", "HassShoppingListAddItem", {"item": {"value": "apple"}}
+    )
+
+    beer_id = hass.data["shopping_list"].items[0]["id"]
+    wine_id = hass.data["shopping_list"].items[1]["id"]
+    apple_id = hass.data["shopping_list"].items[2]["id"]
+
+    client = await hass_ws_client(hass)
+
+    # Testing sending bad item id.
+    await client.send_json(
+        {
+            "id": 8,
+            "type": "shopping_list/items/reorder",
+            "item_ids": [wine_id, apple_id, beer_id, "BAD_ID"],
+        }
+    )
+    msg = await client.receive_json()
+    assert msg["success"] is False
+    assert msg["error"]["code"] == ERR_NOT_FOUND
+
+    # Testing not sending all unchecked item ids.
+    await client.send_json(
+        {
+            "id": 9,
+            "type": "shopping_list/items/reorder",
+            "item_ids": [wine_id, apple_id],
+        }
+    )
+    msg = await client.receive_json()
+    assert msg["success"] is False
+    assert msg["error"]["code"] == ERR_INVALID_FORMAT

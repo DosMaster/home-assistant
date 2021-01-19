@@ -21,10 +21,7 @@ class TestUVCSetup(unittest.TestCase):
     def setUp(self):
         """Set up things to be run when tests are started."""
         self.hass = get_test_home_assistant()
-
-    def tearDown(self):
-        """Stop everything that was started."""
-        self.hass.stop()
+        self.addCleanup(self.hass.stop)
 
     @mock.patch("uvcclient.nvr.UVCRemote")
     @mock.patch.object(uvc, "UnifiVideoCamera")
@@ -54,6 +51,7 @@ class TestUVCSetup(unittest.TestCase):
         mock_remote.return_value.server_version = (3, 2, 0)
 
         assert setup_component(self.hass, "camera", {"camera": config})
+        self.hass.block_till_done()
 
         assert mock_remote.call_count == 1
         assert mock_remote.call_args == mock.call("foo", 123, "secret", ssl=False)
@@ -78,6 +76,7 @@ class TestUVCSetup(unittest.TestCase):
         mock_remote.return_value.server_version = (3, 2, 0)
 
         assert setup_component(self.hass, "camera", {"camera": config})
+        self.hass.block_till_done()
 
         assert mock_remote.call_count == 1
         assert mock_remote.call_args == mock.call("foo", 7080, "secret", ssl=False)
@@ -102,6 +101,7 @@ class TestUVCSetup(unittest.TestCase):
         mock_remote.return_value.server_version = (3, 1, 3)
 
         assert setup_component(self.hass, "camera", {"camera": config})
+        self.hass.block_till_done()
 
         assert mock_remote.call_count == 1
         assert mock_remote.call_args == mock.call("foo", 7080, "secret", ssl=False)
@@ -116,14 +116,20 @@ class TestUVCSetup(unittest.TestCase):
     def test_setup_incomplete_config(self, mock_uvc):
         """Test the setup with incomplete configuration."""
         assert setup_component(self.hass, "camera", {"platform": "uvc", "nvr": "foo"})
+        self.hass.block_till_done()
+
         assert not mock_uvc.called
         assert setup_component(
             self.hass, "camera", {"platform": "uvc", "key": "secret"}
         )
+        self.hass.block_till_done()
+
         assert not mock_uvc.called
         assert setup_component(
             self.hass, "camera", {"platform": "uvc", "port": "invalid"}
         )
+        self.hass.block_till_done()
+
         assert not mock_uvc.called
 
     @mock.patch.object(uvc, "UnifiVideoCamera")
@@ -133,6 +139,8 @@ class TestUVCSetup(unittest.TestCase):
         config = {"platform": "uvc", "nvr": "foo", "key": "secret"}
         mock_remote.return_value.index.side_effect = error
         assert setup_component(self.hass, "camera", {"camera": config})
+        self.hass.block_till_done()
+
         assert not mock_uvc.called
 
     def test_setup_nvr_error_during_indexing_notauthorized(self):
@@ -157,6 +165,8 @@ class TestUVCSetup(unittest.TestCase):
         mock_remote.return_value = None
         mock_remote.side_effect = error
         assert setup_component(self.hass, "camera", {"camera": config})
+        self.hass.block_till_done()
+
         assert not mock_remote.index.called
         assert not mock_uvc.called
 
@@ -187,6 +197,7 @@ class TestUVC(unittest.TestCase):
         self.uvc = uvc.UnifiVideoCamera(self.nvr, self.uuid, self.name, self.password)
         self.nvr.get_camera.return_value = {
             "model": "UVC Fake",
+            "uuid": "06e3ff29-8048-31c2-8574-0852d1bd0e03",
             "recordingSettings": {"fullTimeRecordEnabled": True},
             "host": "host-a",
             "internalHost": "host-b",
@@ -199,7 +210,10 @@ class TestUVC(unittest.TestCase):
                     "fps": 25,
                     "bitrate": 6000000,
                     "isRtspEnabled": True,
-                    "rtspUris": ["rtsp://host-a:7447/uuid_rtspchannel_0"],
+                    "rtspUris": [
+                        "rtsp://host-a:7447/uuid_rtspchannel_0",
+                        "rtsp://foo:7447/uuid_rtspchannel_0",
+                    ],
                 },
                 {
                     "id": "1",
@@ -208,11 +222,15 @@ class TestUVC(unittest.TestCase):
                     "fps": 15,
                     "bitrate": 1200000,
                     "isRtspEnabled": False,
-                    "rtspUris": ["rtsp://host-a:7447/uuid_rtspchannel_1"],
+                    "rtspUris": [
+                        "rtsp://host-a:7447/uuid_rtspchannel_1",
+                        "rtsp://foo:7447/uuid_rtspchannel_1",
+                    ],
                 },
             ],
         }
         self.nvr.server_version = (3, 2, 0)
+        self.uvc.update()
 
     def test_properties(self):
         """Test the properties."""
@@ -221,11 +239,12 @@ class TestUVC(unittest.TestCase):
         assert "Ubiquiti" == self.uvc.brand
         assert "UVC Fake" == self.uvc.model
         assert SUPPORT_STREAM == self.uvc.supported_features
+        assert "uuid" == self.uvc.unique_id
 
     def test_stream(self):
         """Test the RTSP stream URI."""
         stream_source = yield from self.uvc.stream_source()
-        assert stream_source == "rtsp://host-a:7447/uuid_rtspchannel_0"
+        assert stream_source == "rtsp://foo:7447/uuid_rtspchannel_0"
 
     @mock.patch("uvcclient.store.get_info_store")
     @mock.patch("uvcclient.camera.UVCCameraClientV320")
@@ -258,7 +277,7 @@ class TestUVC(unittest.TestCase):
             """Mock login."""
             try:
                 responses.pop(0)
-                raise socket.error
+                raise OSError
             except IndexError:
                 pass
 

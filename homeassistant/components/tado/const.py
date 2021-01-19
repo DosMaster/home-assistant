@@ -46,11 +46,15 @@ TADO_HVAC_ACTION_TO_HA_HVAC_ACTION = {
 # Configuration
 CONF_FALLBACK = "fallback"
 DATA = "data"
+UPDATE_TRACK = "update_track"
 
 # Types
 TYPE_AIR_CONDITIONING = "AIR_CONDITIONING"
 TYPE_HEATING = "HEATING"
 TYPE_HOT_WATER = "HOT_WATER"
+
+TYPE_BATTERY = "BATTERY"
+TYPE_POWER = "POWER"
 
 # Base modes
 CONST_MODE_OFF = "OFF"
@@ -135,3 +139,14 @@ SUPPORT_PRESET = [PRESET_AWAY, PRESET_HOME]
 
 TADO_SWING_OFF = "OFF"
 TADO_SWING_ON = "ON"
+
+DOMAIN = "tado"
+
+SIGNAL_TADO_UPDATE_RECEIVED = "tado_update_received_{}_{}_{}"
+UNIQUE_ID = "unique_id"
+
+DEFAULT_NAME = "Tado"
+
+TADO_ZONE = "Zone"
+
+UPDATE_LISTENER = "update_listener"
