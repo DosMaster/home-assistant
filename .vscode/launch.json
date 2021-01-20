@@ -12,7 +12,8 @@
       "args": [
         "--debug",
         "-c",
-        "config"
+        "config",
+        "--log-file=ha.log"
       ]
     },
     {
