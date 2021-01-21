@@ -45,6 +45,49 @@
           "remoteRoot": "/usr/src/homeassistant"
         }
       ],
+    },
+    {
+        "name": "Python - HomeAssistant",
+        "type": "python",
+        "request": "launch",
+        "justMyCode": false,
+        "stopOnEntry": false,
+        "pythonPath": "${config:python.pythonPath}",
+        "program": "${workspaceFolder}/__main__.py",
+        "args": [
+            "-cc:/dev/homeautomation/config",
+            "--runner",
+            //"--logfile-color",
+            "--log-file=ha.log"
+        ],
+        "cwd": "${workspaceFolder}",
+        "env": {},
+        "envFile": "${workspaceFolder}/.env",
+        "debugOptions": [
+        ],
+        "console": "externalTerminal"
+    },
+    {
+        "name": "Python - HomeAssistant - Core",
+        "type": "python",
+        "request": "launch",
+        "justMyCode": false,
+        "stopOnEntry": false,
+        "pythonPath": "${config:python.pythonPath}",
+        "program": "${workspaceFolder}/homeassistant/__main__.py",
+        "args": [
+            "-c",
+            "config",
+            //"--runner",
+            //"--logfile-color",
+            "--log-file=ha.log"
+        ],
+        "cwd": "${workspaceFolder}",
+        "env": {},
+        "envFile": "${workspaceFolder}/.env",
+        "debugOptions": [
+        ],
+        "console": "externalTerminal"
     }
   ]
 }
