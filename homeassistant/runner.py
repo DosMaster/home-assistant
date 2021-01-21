@@ -6,6 +6,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from homeassistant import bootstrap
+from homeassistant.const import __version__
 from homeassistant.core import callback
 from homeassistant.helpers.frame import warn_use
 
@@ -37,12 +38,13 @@ class RuntimeConfig:
     log_rotate_days: Optional[int] = None
     log_file: Optional[str] = None
     log_no_color: bool = False
+    logfile_color: bool = False
 
     debug: bool = False
     open_ui: bool = False
 
 
-class HassEventLoopPolicy(asyncio.DefaultEventLoopPolicy):  # type: ignore[valid-type,misc]
+class HassEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
     """Event loop policy for Home Assistant."""
 
     def __init__(self, debug: bool) -> None:
@@ -97,6 +99,7 @@ def _async_loop_exception_handler(_: Any, context: Dict[str, Any]) -> None:
 
 async def setup_and_run_hass(runtime_config: RuntimeConfig) -> int:
     """Set up Home Assistant and run."""
+    print("Version: %s" % __version__)
     hass = await bootstrap.async_setup_hass(runtime_config)
 
     if hass is None:

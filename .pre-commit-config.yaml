@@ -71,7 +71,7 @@ repos:
       # shell.
       - id: mypy
         name: mypy
-        entry: script/run-in-env.sh mypy
+        entry: script/run-in-env.sh mypy --warn-unused-ignore
         language: script
         types: [python]
         require_serial: true

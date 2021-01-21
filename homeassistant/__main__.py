@@ -109,6 +109,9 @@ def get_arguments() -> argparse.Namespace:
         "--log-no-color", action="store_true", help="Disable color logs"
     )
     parser.add_argument(
+        "--logfile-color", action="store_true", help="Enable color file logs"
+    )
+    parser.add_argument(
         "--runner",
         action="store_true",
         help=f"On restart exit with code {RESTART_EXIT_CODE}",
@@ -130,27 +133,28 @@ def get_arguments() -> argparse.Namespace:
 
 def daemonize() -> None:
     """Move current process to daemon process."""
-    # Create first fork
-    pid = os.fork()
-    if pid > 0:
-        sys.exit(0)
+    if sys.platform != "win32":
+        # Create first fork
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
 
-    # Decouple fork
-    os.setsid()
+        # Decouple fork
+        os.setsid()
 
-    # Create second fork
-    pid = os.fork()
-    if pid > 0:
-        sys.exit(0)
+        # Create second fork
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
 
-    # redirect standard file descriptors to devnull
-    infd = open(os.devnull)
-    outfd = open(os.devnull, "a+")
-    sys.stdout.flush()
-    sys.stderr.flush()
-    os.dup2(infd.fileno(), sys.stdin.fileno())
-    os.dup2(outfd.fileno(), sys.stdout.fileno())
-    os.dup2(outfd.fileno(), sys.stderr.fileno())
+        # redirect standard file descriptors to devnull
+        infd = open(os.devnull)
+        outfd = open(os.devnull, "a+")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os.dup2(infd.fileno(), sys.stdin.fileno())
+        os.dup2(outfd.fileno(), sys.stdout.fileno())
+        os.dup2(outfd.fileno(), sys.stderr.fileno())
 
 
 def check_pid(pid_file: str) -> None:
@@ -240,7 +244,10 @@ def try_to_restart() -> None:
 
     # Try to not leave behind open filedescriptors with the emphasis on try.
     try:
-        max_fd = os.sysconf("SC_OPEN_MAX")
+        if sys.platform != "win32":
+            max_fd = os.sysconf("SC_OPEN_MAX")
+        else:
+            max_fd = 256
     except ValueError:
         max_fd = 256
 

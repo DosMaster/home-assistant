@@ -86,6 +86,7 @@ async def async_setup_hass(
         runtime_config.log_rotate_days,
         runtime_config.log_file,
         runtime_config.log_no_color,
+        runtime_config.logfile_color,
     )
 
     hass.config.skip_pip = runtime_config.skip_pip
@@ -260,6 +261,7 @@ def async_enable_logging(
     log_rotate_days: Optional[int] = None,
     log_file: Optional[str] = None,
     log_no_color: bool = False,
+    logfile_color: bool = False,
 ) -> None:
     """Set up the logging.
 
@@ -337,7 +339,23 @@ def async_enable_logging(
             err_handler = logging.FileHandler(err_log_path, mode="w", delay=True)
 
         err_handler.setLevel(logging.INFO if verbose else logging.WARNING)
-        err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        if not logfile_color:
+            err_handler.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        else:
+            err_handler.setFormatter(
+                ColoredFormatter(
+                    colorfmt,
+                    datefmt=datefmt,
+                    reset=True,
+                    log_colors={
+                        "DEBUG": "cyan",
+                        "INFO": "green",
+                        "WARNING": "yellow",
+                        "ERROR": "red",
+                        "CRITICAL": "red",
+                    },
+                )
+            )
 
         logger = logging.getLogger("")
         logger.addHandler(err_handler)
